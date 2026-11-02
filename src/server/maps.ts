@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { MapState } from '../shared/protocol.js';
-import { OFFICE_MAP, checkCustomMaps, isMapChoice, planOf, type CustomMap, type MapPlan } from '../shared/maps/index.js';
+import { DEFAULT_MAP, checkCustomMaps, isMapChoice, planOf, type CustomMap, type MapPlan } from '../shared/maps/index.js';
 
 /** The most custom maps read, and the biggest file that's read as one. */
 const MAX_FILES = 24;
@@ -14,7 +14,7 @@ interface Saved {
 }
 
 /**
- * The building's map (the office, the castle, or one of your own), picked in ⚙️ Settings by anyone
+ * The building's map (agentix, the office, the castle, or one of your own), picked in ⚙️ Settings by anyone
  * and kept in .agent-office/map.json. Everyone's on the same one. Maps of your own are JSON files in
  * .agent-office/maps/ (see docs/maps.md), read again whenever someone looks at the list.
  */
@@ -40,14 +40,14 @@ export class Maps {
 
   state(): MapState {
     const pick = this.pick();
-    // Who picked it, while it's what they picked (not the office, while their map won't load).
+    // Who picked it, while it's what they picked (not the default, while their map won't load).
     return { pick, custom: this.custom, ...(this.saved?.pick === pick ? { by: this.saved.by, at: this.saved.at } : {}) };
   }
 
   /** The map everyone's on: the one picked, while it's there to be had. */
   pick(): string {
     const p = this.saved?.pick;
-    return p && isMapChoice(p, this.custom) ? p : OFFICE_MAP;
+    return p && isMapChoice(p, this.custom) ? p : DEFAULT_MAP;
   }
 
   /** Where everything is on the building's map. */
@@ -106,7 +106,7 @@ export class Maps {
       const s = JSON.parse(readFileSync(this.file, 'utf8')) as Partial<Saved>;
       if (typeof s.pick === 'string') this.saved = { pick: s.pick, by: typeof s.by === 'string' ? s.by : 'someone', at: typeof s.at === 'number' ? s.at : 0 };
     } catch {
-      // never set: the office
+      // never set: agentix
     }
   }
 
