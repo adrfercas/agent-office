@@ -4,6 +4,7 @@ import { buildGong } from '../../features/gong/world';
 import type { Interactable } from '../types';
 import { mesh, roundedBox, textPlane, toon } from '../toon';
 import { box, collide, lit, placed, shade } from '../station/kit';
+import { persondesk } from './furniture';
 import type { AgentixKit } from './kit';
 
 // What stands about the agentix office, as the photos show it: leafy plants (some with red chilies) on
@@ -239,4 +240,5 @@ export const FURNISHING_PROPS = {
     kit.gong = gong;
   },
   coffee: (kit: AgentixKit, p: PropConfig) => kit.interactables.push(coffee(kit, p)),
-} satisfies Record<'plant' | 'armoire' | 'monitor' | 'basket' | 'gong' | 'coffee', (kit: AgentixKit, p: PropConfig) => void>;
+  persondesk,
+} satisfies Record<'plant' | 'armoire' | 'monitor' | 'basket' | 'gong' | 'coffee' | 'persondesk', (kit: AgentixKit, p: PropConfig) => void>;

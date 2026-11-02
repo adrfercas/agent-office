@@ -21,6 +21,7 @@ import type { Floor } from '../floor.js';
 import type { Sky } from '../sky.js';
 import type { Themes } from '../theme.js';
 import type { Maps } from '../maps.js';
+import type { Roster } from '../roster.js';
 import type { OfficePrompts } from '../prompts.js';
 import type { LeaveOnMerge } from '../leave-on-merge.js';
 import type { ChatLog } from '../history.js';
@@ -59,6 +60,8 @@ export interface BuildingServices {
   sky: Sky;
   themes: Themes;
   maps: Maps;
+  /** The team: the people of the office and what's known about them (.agent-office/team.json). */
+  roster: Roster;
   prompts: OfficePrompts;
   leaveOnMerge: LeaveOnMerge;
   ledger: Ledger;

@@ -38,6 +38,7 @@ import type { installPeers } from '../features/peers';
 import type { installRooftop } from '../features/rooftop';
 import type { installSeating } from '../features/seating';
 import type { installSmoke } from '../features/smoke';
+import type { installTeam } from '../features/team';
 import type { installTelescope } from '../features/telescope';
 import type { installTv } from '../features/tv';
 import type { installVoice } from '../features/voice';
@@ -99,6 +100,7 @@ export interface Parts {
   arcade: Made<typeof installArcade>;
   rooftop: Made<typeof installRooftop>;
   telescope: Made<typeof installTelescope>;
+  team: Made<typeof installTeam>;
   dog: Made<typeof installDog>;
   jukebox: Made<typeof installJukebox>;
   cabinet: Made<typeof installCabinet>;

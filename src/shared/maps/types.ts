@@ -54,8 +54,6 @@ export interface TableConfig {
   sides?: 'both' | 'inner' | 'outer';
   /** What its seats are called: "West table, seat 2". */
   name?: string;
-  /** Its seats are handed out before every other table's, in the order the tables are listed (agentix's six real desks are desk-1 to desk-6 this way). */
-  first?: boolean;
 }
 
 /**
@@ -64,6 +62,8 @@ export interface TableConfig {
  */
 export interface PropConfig {
   kind: string;
+  /** Which one it is, for a prop something else refers to (an agentix person's desk: its id in PEOPLE_DESKS). */
+  id?: string;
   x: number;
   z: number;
   /** Up off the floor (a banner, a window, a chandelier). */

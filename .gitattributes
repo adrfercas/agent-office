@@ -1,3 +1,8 @@
 # The deploy scripts run under bash, and provision.sh is piped to a Linux server: CRLF breaks both
 # (Git for Windows checks text files out with CRLF by default).
 *.sh text eol=lf
+
+# tests/maps.test.ts compares docs/maps/*.json byte for byte with what it generates and splits docs/maps.md
+# on "\n", so CRLF in a Windows checkout fails three tests there.
+docs/maps.md text eol=lf
+docs/maps/*.json text eol=lf

@@ -21,6 +21,7 @@ import { jukebox } from './jukebox';
 import { leaveOnMerge } from './leave-on-merge';
 import { machine } from './machine';
 import { map } from './map';
+import { people } from './people';
 import { meeting } from './meeting';
 import { notify } from './notify';
 import { prompts } from './prompts';
@@ -59,6 +60,7 @@ export const SLICES: readonly Slice[] = [
   cars,
   jail,
   team,
+  people,
   accounts,
   signins,
 ];

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BOARD_KEYS, type BoardKey } from '../../../shared/maps';
+import { BOARD_KEYS, type BoardKey, type PropConfig } from '../../../shared/maps';
 import type { Interactable } from '../types';
 import { mesh, roundedBox, textPlane, toon } from '../toon';
 import { TABLE_TOP, box, placed, collide, shade } from '../station/kit';
@@ -8,6 +8,14 @@ import type { AgentixKit } from './kit';
 // What the agentix office is furnished with: the white sit-stand desks, the beige mesh chairs at them,
 // and the boards on the walls. All of it is modelled from two photos, so sizes are estimates. The
 // real room's six desks are single desks; the made-up rows next door are the same desk, joined.
+
+/** The shape of a desk the builders below need: the plan's tables have it, and so does a person's desk. */
+type DeskSpec = Pick<AgentixKit['plan']['tables'][number], 'x' | 'z' | 'length' | 'width' | 'rotY' | 'sides'>;
+
+/** How far a chair stands from the middle of the desk it is at (m): the desk's half width and then some. */
+export const CHAIR_OUT = 0.9;
+/** The id of the west desk, which has what the photos show on it and under it (see persondesk). */
+const WEST_DESK = 'west';
 
 const TOP_THICK = 0.03;
 const CASTERS = 5;
@@ -49,7 +57,7 @@ function cable(x: number, z: number, dz: number, sag: number): THREE.BufferGeome
 }
 
 /** One desk or one joined row: tops, T-legs with telescoping columns, a cross-beam and some cable. */
-function buildDesk(kit: AgentixKit, t: AgentixKit['plan']['tables'][number], parts: DeskParts) {
+function buildDesk(kit: AgentixKit, t: DeskSpec, parts: DeskParts) {
   const { pal } = kit;
   const top = toon(pal.desk);
   const white = toon(pal.frame);
@@ -84,7 +92,7 @@ function buildDesk(kit: AgentixKit, t: AgentixKit['plan']['tables'][number], par
 }
 
 /** What is on and under the west desk in the photos: a blue drinks crate, a green bottle, a mat and a mouse. */
-function westDeskThings(kit: AgentixKit, t: AgentixKit['plan']['tables'][number]) {
+function westDeskThings(kit: AgentixKit, t: DeskSpec) {
   // The desk's local x runs across it; the sitter's side is `s`, and the monitor stands at the far one.
   const s = t.sides[0] ?? -1;
   const g = placed(t.x, 0, t.z, t.rotY);
@@ -122,11 +130,34 @@ function westDeskThings(kit: AgentixKit, t: AgentixKit['plan']['tables'][number]
 
 /** Every table of the plan, as the white sit-stand desks (the seats have chairs, so no benches). */
 export function buildDesks(kit: AgentixKit): void {
-  const parts = deskParts(kit.plan.tables[0]?.width ?? 0.8);
-  for (const t of kit.plan.tables) {
-    buildDesk(kit, t, parts);
-    if (t.name === 'West desk') westDeskThings(kit, t);
-  }
+  const parts = partsOfDesks(kit);
+  for (const t of kit.plan.tables) buildDesk(kit, t, parts);
+}
+
+const deskGeometry = new WeakMap<AgentixKit, DeskParts>();
+
+/** The geometries every desk of a build shares. */
+function partsOfDesks(kit: AgentixKit): DeskParts {
+  let parts = deskGeometry.get(kit);
+  if (!parts) deskGeometry.set(kit, (parts = deskParts(0.8)));
+  return parts;
+}
+
+/**
+ * A person's desk: the same white sit-stand desk as the rows, with its chair standing at it, always
+ * there whether or not anyone sits in it. `rotY` is the way the chair is from the desk (0 is south), the
+ * desk runs across that: `width` along it (1.8) and `length` its depth (0.8), as AGENTIX_PROP_KINDS says.
+ * The west desk has what the photos show on it and under it.
+ */
+export function persondesk(kit: AgentixKit, p: PropConfig): void {
+  const out = p.rotY ?? 0;
+  const spec: DeskSpec = { x: p.x, z: p.z, length: p.width ?? 1.8, width: p.length ?? 0.8, rotY: out + Math.PI / 2, sides: [-1] };
+  buildDesk(kit, spec, partsOfDesks(kit));
+  if (p.id === WEST_DESK) westDeskThings(kit, spec);
+  const chair = deskChair(kit);
+  chair.position.set(p.x + Math.sin(out) * CHAIR_OUT, 0, p.z + Math.cos(out) * CHAIR_OUT);
+  chair.rotation.y = out;
+  kit.group.add(chair);
 }
 
 /** The pieces of a chair, shared by every chair built for one kit. */

@@ -18,7 +18,7 @@ import { mapNews } from './handlers/settings.js';
  * then whatever they send, until they leave.
  */
 export function onConnection(ctx: Ctx, ws: WebSocket, url: URL, session: Session) {
-  const { cfg, accounts, clients, chat, building, floors, maps, team, upgrader, ledger, webhook, machine, sky, themes, prompts, leaveOnMerge, signins } = ctx;
+  const { cfg, accounts, clients, chat, building, floors, maps, roster, team, upgrader, ledger, webhook, machine, sky, themes, prompts, leaveOnMerge, signins } = ctx;
   const { sendTo, broadcast, floorInfos, floorsChanged, arrivalFloor, meOf, accountsChanged, limitsOf } = ctx;
   const id = randomBytes(5).toString('hex');
   // Back on the floor they were on before a reload, a restart or closing the tab, else the first floor.
@@ -85,6 +85,10 @@ export function onConnection(ctx: Ctx, ws: WebSocket, url: URL, session: Session
     leaveOnMerge: leaveOnMerge.state(),
     ...(onRoof ? roofView(ctx) : floorView(ctx, floor)),
   });
+  // The team comes right behind the welcome, read fresh in case its file was edited on disk.
+  roster.refresh();
+  const people = roster.state();
+  if (people.members.length || people.error) sendTo(client, { t: 'people', state: people });
   screensOf(ctx, client, floor);
   broadcast({ t: 'peer.join', peer: client.peer }, id);
   if (account) accountsChanged(); // now online

@@ -1,0 +1,75 @@
+/* The team window: the plan, the people (round, with a light) and the agents (square, with a tag) */
+.modal.tw header { flex-wrap: wrap; }
+.tw-meta-top { font-size: 13px; font-weight: 800; color: var(--muted); }
+.tw-body { padding: 14px 16px; }
+.tw-grid { display: grid; grid-template-columns: minmax(280px, 5fr) minmax(320px, 6fr); gap: 18px; align-items: start; }
+.tw-left { position: sticky; top: 0; }
+.tw-right h3 { margin: 0 0 8px; font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+.tw-right h3 small { text-transform: none; letter-spacing: 0; font-weight: 700; color: var(--muted); }
+.tw-agents { margin-top: 18px; padding-top: 12px; border-top: 3px dashed var(--muted); }
+.tw-error { margin: 0 0 12px; padding: 8px 12px; border: 2px solid var(--ink); border-radius: 10px; background: #ffd6e0; font-weight: 800; font-size: 14px; }
+.tw-empty, .tw-empty-block { color: var(--muted); font-style: italic; font-weight: 700; }
+.tw-empty-block { margin: 6px 0 12px; font-size: 14px; }
+
+/* The plan */
+.tw-plan { width: 100%; height: auto; display: block; border: 3px solid var(--ink); border-radius: 14px; background: var(--paper-2); }
+.tw-floor { fill: #e8e4db; stroke: var(--ink); stroke-width: .18; }
+.tw-wall { stroke: #6f675d; stroke-width: .22; }
+.tw-window { stroke: #5aa7e0; stroke-width: .3; }
+.tw-door { fill: #b0793a; }
+.tw-rowdesk { fill: #fff; stroke: #aaa49a; stroke-width: .06; }
+.tw-desk { fill: #fff; stroke: var(--ink); stroke-width: .08; }
+.tw-desk.taken { fill: #f6efe0; }
+.tw-circle { stroke: var(--ink); stroke-width: .12; }
+.tw-person { cursor: pointer; }
+.tw-person.waiting .tw-circle { stroke-dasharray: .25 .18; }
+.tw-initials { font-size: .52px; font-weight: 900; fill: #fff; text-anchor: middle; dominant-baseline: central; paint-order: stroke; stroke: rgba(0, 0, 0, .55); stroke-width: .08; pointer-events: none; }
+.tw-square { stroke: var(--ink); stroke-width: .12; }
+.tw-agent-mark.needs .tw-square { stroke: #d62839; stroke-width: .22; }
+.tw-agent-mark.done .tw-square { stroke-dasharray: .2 .12; }
+.tw-note { font-size: .55px; font-weight: 800; fill: var(--muted); }
+.tw-legend { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.tw-key-circle, .tw-key-square, .tw-key-desk, .tw-key-row { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--ink); vertical-align: -2px; }
+.tw-key-circle { border-radius: 50%; background: #35c46b; }
+.tw-key-square { border-radius: 3px; background: #6b8cff; }
+.tw-key-desk { width: 16px; height: 8px; background: #fff; }
+.tw-key-row { width: 16px; height: 8px; background: #fff; border-color: #aaa49a; }
+
+/* A person */
+.tw-person-card { padding: 10px 12px; margin-bottom: 10px; border: 3px solid var(--ink); border-radius: 14px; background: #fff; }
+.tw-person-card header { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; padding: 0; border: 0; background: none; }
+.tw-light { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--ink); flex: none; }
+.tw-you { font-weight: 700; color: var(--muted); }
+.tw-role { flex: 1; min-width: 80px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.tw-avail { font-size: 13px; font-weight: 900; }
+.tw-checked { margin: 2px 0 8px 26px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.tw-row { display: grid; grid-template-columns: 82px 1fr; gap: 8px; align-items: baseline; padding: 3px 0; font-size: 14px; }
+.tw-label { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.tw-value select, .tw-value input { width: 100%; font: inherit; font-size: 14px; border: 2px solid var(--ink); border-radius: 10px; padding: 5px 8px; background: #fff; }
+.tw-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.tw-chip { padding: 1px 8px; border: 2px solid var(--ink); border-radius: 999px; background: var(--paper-2); font-size: 12px; font-weight: 800; }
+.tw-files { margin-top: 6px; font-size: 13px; }
+.tw-files summary { cursor: pointer; font-weight: 800; color: var(--muted); }
+.tw-files p { margin: 6px 0 0; white-space: pre-wrap; }
+.tw-actions { display: flex; gap: 8px; margin-top: 8px; }
+.tw-actions .btn { padding: 3px 12px; font-size: 13px; }
+
+/* An agent: a different card from a person's, tinted and tagged, with its own colour down one side */
+.tw-agent-card { padding: 10px 12px; margin-bottom: 10px; border: 3px solid var(--ink); border-left: 10px solid var(--agent, var(--ink)); border-radius: 6px; background: #eef3ff; }
+.tw-agent-card.needs { background: #ffe9ec; }
+.tw-agent-card header { display: flex; align-items: center; gap: 8px; padding: 0; border: 0; background: none; }
+.tw-agent-card header strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tw-tag { padding: 1px 6px; border: 2px solid var(--ink); border-radius: 4px; background: #fff; font-size: 10px; font-weight: 900; letter-spacing: .06em; }
+.tw-status { padding: 1px 8px; border: 2px solid var(--ink); border-radius: 4px; font-size: 11px; font-weight: 900; text-transform: uppercase; background: #fff; }
+.tw-status.working { background: #d8f5e3; }
+.tw-status.needs { background: #d62839; color: #fff; }
+.tw-status.done { background: #dbe7ff; }
+.tw-model, .tw-task, .tw-meta { margin: 4px 0 0; font-size: 13px; }
+.tw-model { font-weight: 800; color: var(--muted); }
+.tw-task { font-weight: 700; }
+.tw-meta { font-size: 12px; font-weight: 700; color: var(--muted); }
+
+@media (max-width: 800px) {
+  .tw-grid { grid-template-columns: 1fr; }
+  .tw-left { position: static; }
+}

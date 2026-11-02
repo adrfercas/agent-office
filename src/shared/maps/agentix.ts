@@ -80,7 +80,37 @@ const props: PropConfig[] = [
   { kind: 'coffee', x: 8.5, z: 1.25, rotY: Math.PI },
 ];
 
-const desk = (name: string, x: number, z: number, along: 'x' | 'z', sides: 'inner' | 'outer') => ({ name, x, z, length: 1.8, width: 0.8, rotY: along === 'x' ? ALONG_X : 0, seats: 1, sides, first: true });
+/**
+ * A desk where a person of the team sits (see shared/team.ts), as opposed to the worker seats at the
+ * long rows next door. `rotY` is the way from the desk to the person sitting at it (0 is +z, as for any
+ * seat), and `along` the way the desk itself runs. Nobody is put at a desk here: the owner assigns
+ * them in the app. Only these desks are built by the persondesk prop below, one for each.
+ */
+export interface PersonDesk {
+  id: string;
+  name: string;
+  x: number;
+  z: number;
+  rotY: number;
+  along: 'x' | 'z';
+}
+
+export const PEOPLE_DESKS: readonly PersonDesk[] = [
+  // The real room's six desks, as the photos show them (positions and sides are estimates).
+  { id: 'west', name: 'West desk', x: -10.9, z: -3.1, rotY: 0, along: 'x' },
+  { id: 'middle', name: 'Middle desk', x: -10.3, z: -3.95, rotY: Math.PI, along: 'x' },
+  { id: 'armoire', name: 'Armoire desk', x: -10.9, z: -6.95, rotY: 0, along: 'x' },
+  { id: 'whiteboard', name: 'Whiteboard desk', x: -7, z: -5.95, rotY: 0, along: 'x' },
+  { id: 'window', name: 'Window desk', x: -6.5, z: -6.75, rotY: Math.PI, along: 'x' },
+  { id: 'door', name: 'Door desk', x: -6.1, z: -2.55, rotY: -ALONG_X, along: 'z' },
+  // Made up: two more in the board room, because eight people work on site and the photos show six desks.
+  { id: 'board-1', name: 'Board room desk 1', x: 4.8, z: 4.8, rotY: Math.PI, along: 'x' },
+  { id: 'board-2', name: 'Board room desk 2', x: 7.4, z: 4.8, rotY: Math.PI, along: 'x' },
+];
+
+/** A person's desk as a prop: it is walked round, and drawn by the builder (world/agentix/). */
+const personDesk = (d: PersonDesk): PropConfig => ({ kind: 'persondesk', id: d.id, x: d.x, z: d.z, rotY: d.rotY, width: 1.8, length: 0.8 });
+props.push(...PEOPLE_DESKS.map(personDesk));
 
 export const AGENTIX: MapConfig = {
   id: 'agentix',
@@ -92,16 +122,10 @@ export const AGENTIX: MapConfig = {
   spawn: { x: -8.6, z: -3.5, rotY: Math.PI },
   door: { x: 11.2, z: 0.4 },
   tables: [
-    // The real room's six desks come first, so they fill first: desk-1 to desk-6.
-    desk('West desk', -10.9, -3.1, 'x', 'inner'),
-    desk('Middle desk', -10.3, -3.95, 'x', 'outer'),
-    desk('Armoire desk', -10.9, -6.95, 'x', 'inner'),
-    desk('Whiteboard desk', -7, -5.95, 'x', 'inner'),
-    desk('Window desk', -6.5, -6.75, 'x', 'outer'),
-    desk('Door desk', -6.1, -2.55, 'z', 'outer'),
-    // The rest of the seats: long desks in the room next door.
-    { name: 'North row', x: 3.3, z: -6.7, length: 13.2, width: 0.8, rotY: ALONG_X, seats: 7 },
-    { name: 'South row', x: 3.3, z: -3.3, length: 13.2, width: 0.8, rotY: ALONG_X, seats: 7 },
+    // All the worker seats are next door, in two long rows: 8 a side, 32 in all. The six real desks and
+    // two more are for people instead (see PEOPLE_DESKS).
+    { name: 'North row', x: 3.3, z: -6.7, length: 15.2, width: 0.8, rotY: ALONG_X, seats: 8 },
+    { name: 'South row', x: 3.3, z: -3.3, length: 15.2, width: 0.8, rotY: ALONG_X, seats: 8 },
   ],
   stations: {
     issues: { x: 10.4, z: 3.6, rotY: ALONG_X },

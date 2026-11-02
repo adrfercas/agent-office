@@ -12,7 +12,7 @@ import type { World } from '../world';
 import { FURNISHING_PROPS } from './decor';
 import { buildBoards, buildDesks, deskChair } from './furniture';
 import { makeKit } from './kit';
-import { buildLehel } from './outside';
+import { buildLehel, turnToLehel } from './outside';
 import { ARCHITECTURE_PROPS, buildShell } from './shell';
 
 /*
@@ -105,6 +105,7 @@ export function buildAgentix(plan: MapPlan): World {
   const dayGround = new THREE.Color('#cfc6b6');
   const nightGround = new THREE.Color('#6b5a48');
   const accent = new THREE.Color();
+  const sunDir = new THREE.Vector3();
   const hsl = { h: 0, s: 0, l: 0 };
   const gongAt = kit.gong?.top;
   const lamps = kit.lights.slice(0, MAX_LIGHTS);
@@ -184,6 +185,9 @@ export function buildAgentix(plan: MapPlan): World {
       lights.ambient.intensity = 0.34 + 0.16 * day;
       // The sun only gets in by the window, so it can be strong; the moon stays a hint.
       lights.sun.intensity *= 0.55 + 0.2 * day;
+      // The sky takes north to be -z; this window looks along the bearing 314, so the sun turns with it.
+      sunDir.copy(lights.sun.position).sub(lights.sun.target.position);
+      lights.sun.position.copy(lights.sun.target.position).add(turnToLehel(sunDir));
       for (const l of lamps) l.intensity = 14 * night * night * (3 - 2 * night);
       // The window's view must reach the trees 50 m off: the sky's own haze is 40 to 90 m on a clear
       // day, which would half-swallow them, and it closes in for fog and rain (down to 28 m). So the

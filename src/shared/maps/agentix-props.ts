@@ -30,6 +30,12 @@ export const AGENTIX_PROP_KINDS = {
   gong: 'The merge gong',
   /** A coffee machine on a counter: a cup perks you up. */
   coffee: 'A coffee machine',
+  /**
+   * A desk where a person of the team sits (see PEOPLE_DESKS), not a worker. `id` is its id there, `rotY` the way
+   * from the desk to the person sitting at it (the same as a seat's: 0 is +z), `width` the desk's length across
+   * that (1.8 unless it says) and `length` its depth (0.8).
+   */
+  persondesk: 'A desk for a person of the team',
 } as const;
 
 export type AgentixPropKind = keyof typeof AGENTIX_PROP_KINDS;
@@ -54,6 +60,9 @@ export function agentixFootprint(p: PropConfig): { rect?: Rect; circle?: Circle 
       return { circle: [p.x, p.z, 0.7] };
     case 'coffee':
       return { rect: boxFootprint(p.x, p.z, 1.2, 0.6, p.rotY ?? 0) };
+    case 'persondesk':
+      // The desk runs across the way the person faces: its depth is along rotY.
+      return { rect: boxFootprint(p.x, p.z, p.length ?? 0.8, p.width ?? 1.8, (p.rotY ?? 0) + Math.PI / 2) };
     default:
       return null;
   }
@@ -78,6 +87,8 @@ export function agentixTop(p: PropConfig): number {
       return 0.85;
     case 'coffee':
       return 1.5;
+    case 'persondesk':
+      return 1.2;
     case 'basket':
       return 0.4;
     default:

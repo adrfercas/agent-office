@@ -1,4 +1,4 @@
-// The agentix office (shared/maps/agentix.ts): that its map plans, that its six real desks come first,
+// The agentix office (shared/maps/agentix.ts): that its map plans, that the workers sit next door and the people at their own desks,
 // that every seat can be walked to from the door, and that it is what the building is until someone picks another map.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,7 +8,7 @@ import path from 'node:path';
 import { Maps } from '../src/server/maps.js';
 import { DESK_BY_ID } from '../src/shared/layout.js';
 import { NavGrid, pathLength } from '../src/shared/nav.js';
-import { AGENTIX, REAL_ROOM } from '../src/shared/maps/agentix.js';
+import { AGENTIX, PEOPLE_DESKS, REAL_ROOM } from '../src/shared/maps/agentix.js';
 import { BUILTIN_MAPS, DEFAULT_MAP, OFFICE_PLAN, mapChoices, planMap, planOf } from '../src/shared/maps/index.js';
 
 const plan = planMap(AGENTIX);
@@ -47,26 +47,40 @@ test('agentix has every seat the office has, by the same ids', () => {
   }
 });
 
-test("the real room's six desks are desk-1 to desk-6", () => {
+test('all 32 worker seats are in the two rows next door, none in the real room', () => {
+  assert.equal(plan.tables.length, 2);
   const { minX, maxX, minZ, maxZ } = REAL_ROOM;
-  for (let i = 1; i <= 6; i++) {
-    const d = plan.byId.get(`desk-${i}`)!;
-    assert.ok(d, `desk-${i} exists`);
-    assert.ok(d.x > minX && d.x < maxX && d.z > minZ && d.z < maxZ, `desk-${i} (${d.x.toFixed(2)}, ${d.z.toFixed(2)}) is in the real room`);
-  }
-  // The seventh is in the room next door.
-  const seventh = plan.byId.get('desk-7')!;
-  assert.ok(seventh.x > REAL_ROOM.maxX, 'desk-7 is past the real room’s east wall');
+  const seats = [...plan.desks, ...plan.overflow];
+  assert.ok(seats.length >= 32);
+  for (const d of seats) assert.ok(!(d.x > minX && d.x < maxX && d.z > minZ && d.z < maxZ), `${d.id} is not in the real room`);
+  assert.ok(plan.byId.get('desk-1')!.x > REAL_ROOM.maxX, 'desk-1 is next door');
+  assert.equal(JSON.stringify(AGENTIX).includes('"first"'), false, 'tables have no `first` field any more');
 });
 
-test('a table without `first` keeps its place: the order is the same as before for any other map', () => {
-  const noFirst = planMap({ ...AGENTIX, id: 'no-first', tables: AGENTIX.tables.map(({ first: _first, ...t }) => t) });
-  // Without the flag, the seats toward the middle of the hall fill first, as in every other map.
-  assert.equal(noFirst.desks.length, plan.desks.length);
-  assert.notDeepEqual(
-    noFirst.desks.slice(0, 6).map((d) => d.id + d.x.toFixed(2) + d.z.toFixed(2)),
-    plan.desks.slice(0, 6).map((d) => d.id + d.x.toFixed(2) + d.z.toFixed(2)),
-  );
+test('the people have eight desks: six in the real room, two made up, each walked round', () => {
+  assert.equal(PEOPLE_DESKS.length, 8);
+  assert.equal(new Set(PEOPLE_DESKS.map((d) => d.id)).size, 8, 'ids are different');
+  const { minX, maxX, minZ, maxZ } = REAL_ROOM;
+  const inRoom = PEOPLE_DESKS.filter((d) => d.x > minX && d.x < maxX && d.z > minZ && d.z < maxZ);
+  assert.equal(inRoom.length, 6);
+  const props = (AGENTIX.props ?? []).filter((p) => p.kind === 'persondesk');
+  assert.deepEqual(props.map((p) => p.id), PEOPLE_DESKS.map((d) => d.id));
+  const rects = plan.obstacles!.rects;
+  for (const d of PEOPLE_DESKS) {
+    const onFloor = rects.some(([x0, x1, z0, z1]) => d.x > x0 && d.x < x1 && d.z > z0 && d.z < z1);
+    assert.ok(onFloor, `${d.id} takes floor, so workers walk round it`);
+    assert.ok(!nav.walkable(d.x, d.z), `${d.id} is not walkable`);
+  }
+});
+
+test('a person at each of the eight desks can get to the door and back, as a worker does', () => {
+  for (const d of PEOPLE_DESKS) {
+    // Where they sit, as a seat is placed: a hand's breadth out from the middle of the desk, facing back across it.
+    const seat = { id: d.id, label: d.name, x: d.x + Math.sin(d.rotY) * 0.05, z: d.z + Math.cos(d.rotY) * 0.05, rotY: d.rotY };
+    const way = nav.wayFrom(seat, [plan.door.x, plan.door.z]);
+    const hop = way.length > 2 && Math.hypot(way[2][0] - way[1][0], way[2][1] - way[1][1]) < 0.8;
+    clear(way, hop ? 2 : 1, `${d.id} going`);
+  }
 });
 
 test('every seat, lectern and meeting chair can be walked to from the door, and back', () => {

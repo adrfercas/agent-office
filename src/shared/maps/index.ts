@@ -162,12 +162,11 @@ export function planMap(input: unknown): MapPlan {
   const rects: Rect[] = [];
   const circles: Circle[] = [];
 
-  // The seats at the tables: the `first` tables' seats, then every table's side toward the middle of the hall, then the far sides.
+  // The seats at the tables: every table's side toward the middle of the hall first, then the far sides.
   if (!Array.isArray(c.tables) || !c.tables.length) throw new MapError('it needs tables for the workers to sit at');
   if (c.tables.length > MAP_LIMITS.tables) throw new MapError(`it has ${c.tables.length} tables, and a map can have ${MAP_LIMITS.tables}`);
-  const first: { def: Omit<DeskDef, 'id' | 'label'>; table: string }[] = [];
-  const inner: typeof first = [];
-  const outer: typeof first = [];
+  const inner: { def: Omit<DeskDef, 'id' | 'label'>; table: string }[] = [];
+  const outer: typeof inner = [];
   const tables: MapPlan['tables'] = [];
   c.tables.forEach((t: TableConfig, i) => {
     const what = `tables[${i}]`;
@@ -203,11 +202,11 @@ export function planMap(input: unknown): MapPlan {
       for (let k = 0; k < n; k++) {
         const t0 = (k - (n - 1) / 2) * (len / n);
         const def = { x: x + along[0] * t0 + nx * out, z: z + along[1] * t0 + nz * out, rotY: Math.atan2(nx, nz) };
-        (t.first === true ? first : isInner ? inner : outer).push({ def, table });
+        (isInner ? inner : outer).push({ def, table });
       }
     }
   });
-  const all = [...first, ...inner, ...outer];
+  const all = [...inner, ...outer];
   const need = MAP_DESKS.length + BEANBAGS.length;
   if (all.length < need) throw new MapError(`its tables seat ${all.length}, and a map needs ${need} (${MAP_DESKS.length} seats and ${BEANBAGS.length} more for when they’re all taken)`);
   const counts = new Map<string, number>();
@@ -328,6 +327,7 @@ export function planMap(input: unknown): MapPlan {
     // Everything the builder reads, in sizes it can build.
     opt(p.y, `${what}.y`, 0, 100);
     opt(p.rotY, `${what}.rotY`, -1e4, 1e4);
+    if (p.id !== undefined && (typeof p.id !== 'string' || p.id.length > 40)) throw new MapError(`${what}.id should be text, up to 40 characters`);
     opt(p.scale, `${what}.scale`, 0.2, 5);
     opt(p.width, `${what}.width`, 0.3, 20);
     opt(p.height, `${what}.height`, 0.3, 20);
