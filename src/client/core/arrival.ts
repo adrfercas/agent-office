@@ -186,7 +186,7 @@ export function installArrival(ctx: Ctx, core: CoreState, parts: ArrivalParts) {
       return;
     }
     if (!p) {
-      $('project-name').textContent = '🏢 Agent Office';
+      $('project-name').textContent = '🏢 agentix';
       $('project-meta').textContent = store.floors.length ? '🛗 Take the elevator to a floor' : '🛗 No floors yet — add a project in the elevator';
       // Where to go next, so it shows even with the floor details turned off.
       $('project-meta').classList.add('lobby');
