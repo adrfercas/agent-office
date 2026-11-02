@@ -1,4 +1,4 @@
-// The team (shared/team.ts): reading it, and the owner's changes to desks and notes.
+// The team (shared/team.ts): reading it, and the owner's changes to desks, notes and chat links.
 import type { PeopleClientMsg } from '../../../shared/protocol.js';
 import type { HandlerMap } from './types.js';
 
