@@ -6,6 +6,7 @@ import type { Net } from '../../net';
 import { store } from '../../state';
 import { clip, h, openModal, timeAgo, type Modal } from '../../ui/dom';
 import { engineLabel } from '../../ui/provider';
+import { talkSection } from './chat';
 import { agentStatus, agentsHere, lasted, lookOf, readTeam, sendEdit, tally } from './controller';
 import { deskSelect, planBusy, planView, type PlanHost } from './floorplan';
 
@@ -72,7 +73,7 @@ function checkedLine(m: TeamMember, now: number): string {
 const notRecorded = () => h('span.tw-empty', {}, 'Not recorded yet');
 
 /** One person's card. `drafts` holds what is being typed for the ones in edit mode. */
-function personCard(m: TeamMember, now: number, drafts: Map<string, Draft>, redraw: () => void): HTMLElement {
+function personCard(m: TeamMember, now: number, drafts: Map<string, Draft>, redraw: () => void, compact = false): HTMLElement {
   const look = lookOf(m, now);
   const draft = drafts.get(m.id);
   const desk = deskSelect(m, readTeam()?.members ?? [], planHost(() => {}));
@@ -114,6 +115,7 @@ function personCard(m: TeamMember, now: number, drafts: Map<string, Draft>, redr
       h('span.tw-role', {}, m.role || 'Role not recorded yet'),
       h('span.tw-avail', { style: `color:${look.state === 'unknown' ? 'var(--muted)' : look.color}` }, look.label),
     ),
+    talkSection(m, { save: (id, chat) => sendEdit(host!.net, { id, chat }), redraw }, compact),
     h('p.tw-checked', {}, checkedLine(m, now)),
     ...rows,
     m.fromFiles ? h('details.tw-files', {}, h('summary', {}, 'From your files'), h('p', {}, m.fromFiles)) : null,
@@ -183,7 +185,7 @@ export function openTeam() {
     const people = h('section.tw-people', {}, h('h3', {}, '🧑 People', h('small', {}, t?.calendarAt ? ` calendar read ${timeAgo(t.calendarAt)}` : ' calendar not read yet')));
     if (!t) people.append(h('p.tw-empty-block', {}, 'Waiting for the office to say who is on the team.'));
     else if (!t.members.length) people.append(h('p.tw-empty-block', {}, 'No team recorded yet. Add the people to the office’s team file (see docs/team.md) and they show up here.'));
-    else for (const m of t.members) people.append(personCard(m, now, drafts, render));
+    else for (const m of t.members) people.append(personCard(m, now, drafts, render, true));
     const bots = h('section.tw-agents', {}, h('h3', {}, '🤖 Agents working with you', h('small', {}, ' started from this office')));
     if (!agents.length) bots.append(h('p.tw-empty-block', {}, 'No agents are running on this floor.'));
     for (const w of agents) bots.append(agentCard(w, now));

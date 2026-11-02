@@ -90,3 +90,17 @@
   .tw-grid { grid-template-columns: 1fr; }
   .tw-left { position: static; }
 }
+
+/* Talk: opens the chat with a person in Google Chat */
+.tw-talk { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 8px 0 2px; }
+.tw-talk-btn { display: inline-block; padding: 6px 22px; font-size: 15px; text-decoration: none; }
+.tw-talk.compact { margin: 4px 0 0 26px; }
+.tw-talk.compact .tw-talk-btn { padding: 2px 14px; font-size: 13px; }
+.tw-talk-edit { padding: 2px 10px; font-size: 12px; }
+.tw-talk-box { flex: 1 0 100%; }
+.tw-talk-help { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.tw-talk-paste { display: flex; gap: 8px; }
+.tw-talk-paste input { flex: 1; min-width: 0; font: inherit; font-size: 14px; border: 2px solid var(--ink); border-radius: 10px; padding: 5px 8px; background: #fff; }
+.tw-talk-paste .btn { padding: 3px 12px; font-size: 13px; }
+.tw-talk-problem { margin: 4px 0 0; font-size: 12px; font-weight: 800; color: #b3121f; }
+.tw-talk-problem:empty { display: none; }

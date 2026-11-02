@@ -1,5 +1,6 @@
 import { readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { chatLink } from '../shared/chat-link.js';
 import { deskMoves } from '../shared/desks.js';
 import { PEOPLE_DESKS } from '../shared/maps/agentix.js';
 import { AVAILABILITY, type AvailabilityInfo, type TeamMember, type TeamState } from '../shared/team.js';
@@ -72,6 +73,9 @@ export function readTeam(json: unknown): { state: TeamState; problems: string[] 
       }
     }
     const fromFiles = text(m.fromFiles, 1000);
+    // A chat link that won't do is left out and said, not opened later.
+    const chat = m.chat === undefined ? undefined : chatLink(m.chat);
+    if (chat && 'error' in chat) problems.push(`${what} (${m.id}) has a chat link that can’t be used: ${chat.error}`);
     members.push({
       id: m.id,
       name,
@@ -83,6 +87,7 @@ export function readTeam(json: unknown): { state: TeamState; problems: string[] 
       workingOn: text(m.workingOn, 300) ?? '',
       goodAt: goodAtOf(m.goodAt),
       ...(fromFiles ? { fromFiles } : {}),
+      ...(chat && 'url' in chat ? { chat: chat.url } : {}),
       availability: availabilityOf(m.availability),
     });
   });
@@ -172,6 +177,14 @@ export class Roster {
     if (edit.goodAt !== undefined) {
       if (!Array.isArray(edit.goodAt)) return 'What they are good at should be a list';
       entry.goodAt = goodAtOf(edit.goodAt);
+    }
+    if (edit.chat !== undefined) {
+      if (edit.chat === null || edit.chat === '') delete entry.chat;
+      else {
+        const link = chatLink(edit.chat);
+        if ('error' in link) return link.error;
+        entry.chat = link.url;
+      }
     }
     try {
       // Written next to the file and moved over it, so a reader never sees half of it.

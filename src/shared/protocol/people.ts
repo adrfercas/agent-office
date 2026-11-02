@@ -6,7 +6,7 @@ import type { TeamEdit, TeamState } from '../team.js';
 export type PeopleClientMsg =
   /** Read the team file again and send it, even if nothing seems to have changed. */
   | { t: 'people.get' }
-  /** Change one person (admins only): their desk, what they're on, what they're good at. */
+  /** Change one person (admins only): their desk, what they're on, what they're good at, their chat link. */
   | { t: 'people.edit'; edit: TeamEdit };
 
 export type PeopleServerMsg =

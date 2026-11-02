@@ -40,6 +40,8 @@ export interface TeamMember {
   goodAt: string[];
   /** What the owner's files say about them, for context. Dated by whoever wrote it, not a live status. */
   fromFiles?: string;
+  /** The link to the owner's direct chat with them in Google Chat (see shared/chat-link.ts). Copied by hand: it can't be worked out from a name or an email address. */
+  chat?: string;
   availability: AvailabilityInfo;
 }
 
@@ -78,4 +80,6 @@ export interface TeamEdit {
   swapWith?: string;
   workingOn?: string;
   goodAt?: string[];
+  /** Their chat link; null or an empty string takes it away. */
+  chat?: string | null;
 }
