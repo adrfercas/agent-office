@@ -74,6 +74,8 @@ export const AVAILABILITY_LOOK: Record<Availability, { color: string; label: str
 export interface TeamEdit {
   id: string;
   desk?: string | null;
+  /** With `desk`: who has that desk now. They take this person's desk (or none) in the same change, so a swap is one edit. */
+  swapWith?: string;
   workingOn?: string;
   goodAt?: string[];
 }

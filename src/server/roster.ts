@@ -1,5 +1,6 @@
 import { readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { deskMoves } from '../shared/desks.js';
 import { PEOPLE_DESKS } from '../shared/maps/agentix.js';
 import { AVAILABILITY, type AvailabilityInfo, type TeamMember, type TeamState } from '../shared/team.js';
 
@@ -153,14 +154,14 @@ export class Roster {
     const at = raw.members.findIndex((m) => isObj(m) && m.id === edit.id);
     if (!member || at < 0) return 'There is nobody by that id on the team';
     const entry = raw.members[at] as Raw;
-    if (edit.desk !== undefined) {
-      if (edit.desk === null) entry.desk = null;
-      else if (typeof edit.desk !== 'string' || !DESK_IDS.has(edit.desk)) return 'There is no such desk';
-      else {
-        if (member.remote) return `${member.name} works remotely, so has no desk`;
-        const taken = this.current.members.find((m) => m.desk === edit.desk && m.id !== member.id);
-        if (taken) return `That desk is ${taken.name}’s`;
-        entry.desk = edit.desk;
+    // Desks: one change moves everyone it touches (a swap is two people), checked before anything is written.
+    if (edit.desk !== undefined || edit.swapWith !== undefined) {
+      const r = deskMoves(this.current.members, { id: member.id, desk: edit.desk as string | null | undefined, swapWith: edit.swapWith as string | undefined });
+      if ('error' in r) return r.error;
+      for (const [who, desk] of Object.entries(r.moves)) {
+        const e = raw.members.find((m) => isObj(m) && m.id === who);
+        if (!isObj(e)) return 'The team file doesn’t have everyone this change touches';
+        e.desk = desk;
       }
     }
     if (edit.workingOn !== undefined) {
