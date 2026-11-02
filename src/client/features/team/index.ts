@@ -1,6 +1,7 @@
 import type { Ctx } from '../../core/context';
 import type { Parts } from '../../core/parts';
 import { store } from '../../state';
+import { rejected, settled } from './floorplan';
 import { bindTeamUi, openPersonCard, openTeam, refreshTeamUi } from './ui';
 
 /*
@@ -21,7 +22,12 @@ export function installTeam(ctx: Ctx, parts: Pick<Parts, 'waiting'>) {
   // Only the agentix office has a team to show.
   const here = () => ctx.plan().id === 'agentix';
   ctx.keys.bind({ code: 'KeyU', when: here, run: () => void openTeam() });
-  store.on('people', refreshTeamUi);
+  store.on('people', () => {
+    settled();
+    refreshTeamUi();
+  });
+  // A refused change (it comes as a warning toast) sends the markers back and says why under the plan.
+  ctx.messages.on('toast', (msg) => msg.level === 'warn' && rejected(msg.text));
   store.on('workers', refreshTeamUi);
   return { openTeam: () => (here() ? openTeam() : undefined), isHere: here, team: () => store.people, open: openPersonCard };
 }

@@ -1,13 +1,13 @@
 import './ui.css';
 import type { MapPlan } from '../../../shared/maps';
-import { PEOPLE_DESKS } from '../../../shared/maps/agentix';
 import type { WorkerInfo } from '../../../shared/protocol';
-import type { TeamMember, TeamState } from '../../../shared/team';
+import type { TeamMember } from '../../../shared/team';
 import type { Net } from '../../net';
 import { store } from '../../state';
 import { clip, h, openModal, timeAgo, type Modal } from '../../ui/dom';
 import { engineLabel } from '../../ui/provider';
-import { agentStatus, agentsHere, deskById, initials, lasted, lookOf, occupants, readTeam, seatPoint, sendEdit, tally, waitingSpot } from './controller';
+import { agentStatus, agentsHere, lasted, lookOf, readTeam, sendEdit, tally } from './controller';
+import { deskSelect, planBusy, planView, type PlanHost } from './floorplan';
 
 // The team window: a small plan of the rooms with everyone on it, the people with whether they are
 // free, what they are on and what they are good at, and the agents working with the owner. People are
@@ -42,93 +42,17 @@ export function refreshTeamUi() {
   for (const fn of [...redraws]) fn();
 }
 
-const NS = 'http://www.w3.org/2000/svg';
-type SvgAttrs = Record<string, string | number | EventListener>;
-function svg<K extends keyof SVGElementTagNameMap>(tag: K, attrs: SvgAttrs = {}, ...kids: (Node | string)[]): SVGElementTagNameMap[K] {
-  const el = document.createElementNS(NS, tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (typeof v === 'function') el.addEventListener(k.slice(2), v);
-    else el.setAttribute(k, String(v));
-  }
-  el.append(...kids);
-  return el;
-}
-
 /** Whether an input in `root` has the cursor: a redraw then would take it away mid-word. */
 function typing(root: HTMLElement): boolean {
   const a = document.activeElement;
   return !!a && root.contains(a) && (a instanceof HTMLInputElement || a instanceof HTMLSelectElement);
 }
 
-// ---- The floor plan -------------------------------------------------------------------------------
+// ---- The floor plan (floorplan.ts) ---------------------------------------------------------------
 
-function floorPlan(t: TeamState | null, now: number, onPerson: (id: string) => void): SVGSVGElement {
-  const plan = host!.plan();
-  const b = plan.bounds;
-  const pad = 0.8;
-  const W = b.maxX - b.minX + 2 * pad;
-  const L = b.maxZ - b.minZ + 2 * pad;
-  const root = svg('svg', { class: 'tw-plan', viewBox: `${b.minX - pad} ${b.minZ - pad} ${W} ${L}`, role: 'img', 'aria-label': 'Plan of the rooms with everyone on it' });
-  root.append(svg('rect', { x: b.minX, y: b.minZ, width: b.maxX - b.minX, height: b.maxZ - b.minZ, class: 'tw-floor' }));
-  for (const p of plan.config?.props ?? []) {
-    if (p.kind === 'wall') {
-      const r = p.rotY ?? 0;
-      const dx = (Math.sin(r) * (p.length ?? 0)) / 2;
-      const dz = (Math.cos(r) * (p.length ?? 0)) / 2;
-      root.append(svg('line', { x1: p.x - dx, y1: p.z - dz, x2: p.x + dx, y2: p.z + dz, class: 'tw-wall' }));
-    } else if (p.kind === 'window') {
-      const half = (p.width ?? 2.6) / 2;
-      root.append(svg('line', { x1: p.x - half, y1: p.z, x2: p.x + half, y2: p.z, class: 'tw-window' }));
-    }
-  }
-  root.append(svg('rect', { x: b.maxX - 0.15, y: plan.door.z - 0.65, width: 0.3, height: 1.3, class: 'tw-door' }, svg('title', {}, 'The way out')));
-  // The agents' rows.
-  for (const tb of plan.tables) {
-    root.append(svg('rect', { x: -tb.width / 2, y: -tb.length / 2, width: tb.width, height: tb.length, class: 'tw-rowdesk', transform: `translate(${tb.x} ${tb.z}) rotate(${(-tb.rotY * 180) / Math.PI})` }));
-  }
-  // The people's desks, and who is at each.
-  const sitting = t ? occupants(t) : new Map<string, TeamMember>();
-  for (const d of PEOPLE_DESKS) {
-    const w = d.along === 'x' ? 1.8 : 0.8;
-    const l = d.along === 'x' ? 0.8 : 1.8;
-    root.append(svg('rect', { x: d.x - w / 2, y: d.z - l / 2, width: w, height: l, class: sitting.has(d.id) ? 'tw-desk taken' : 'tw-desk' }, svg('title', {}, d.name)));
-  }
-  const marker = (m: TeamMember, at: { x: number; z: number }, waiting: boolean) => {
-    const look = lookOf(m, now);
-    root.append(
-      svg(
-        'g',
-        { class: `tw-person${waiting ? ' waiting' : ''}`, transform: `translate(${at.x} ${at.z})`, onclick: () => onPerson(m.id) },
-        svg('title', {}, `${m.name}: ${look.label}`),
-        svg('circle', { r: 0.6, fill: look.color, class: 'tw-circle' }),
-        svg('text', { class: 'tw-initials' }, initials(m.name)),
-      ),
-    );
-  };
-  let queued = 0;
-  for (const m of t?.members ?? []) {
-    if (m.remote) continue;
-    const d = deskById(m.desk);
-    if (d) marker(m, seatPoint(d), false);
-    else marker(m, waitingSpot(queued++), true);
-  }
-  if (queued) root.append(svg('text', { x: waitingSpot(0).x - 0.5, y: waitingSpot(0).z + 1.5 + Math.floor((queued - 1) / 8) * 0.7, class: 'tw-note' }, 'no desk yet'));
-  // The agents, where they sit.
-  for (const w of agentsHere()) {
-    const def = plan.byId.get(w.deskId);
-    if (!def) continue;
-    const st = agentStatus(w);
-    root.append(
-      svg(
-        'g',
-        { class: `tw-agent-mark ${st.tone}`, transform: `translate(${def.x + Math.sin(def.rotY) * 0.85} ${def.z + Math.cos(def.rotY) * 0.85})` },
-        svg('title', {}, `${w.name} (agent): ${st.label}`),
-        svg('rect', { x: -0.4, y: -0.4, width: 0.8, height: 0.8, rx: 0.12, fill: w.color, class: 'tw-square' }),
-      ),
-    );
-  }
-  root.append(svg('text', { x: b.minX + 0.3, y: b.minZ - 0.25, class: 'tw-note' }, 'north, where the windows are'));
-  return root;
+/** What the plan and the desk dropdowns need of the window: who may change the team, sending it, and redrawing. */
+function planHost(onPerson: (id: string) => void): PlanHost {
+  return { plan: () => host!.plan(), canEdit: () => store.me.admin, send: (e) => sendEdit(host!.net, e), redraw: refreshTeamUi, onPerson };
 }
 
 // ---- A person -------------------------------------------------------------------------------------
@@ -151,18 +75,7 @@ const notRecorded = () => h('span.tw-empty', {}, 'Not recorded yet');
 function personCard(m: TeamMember, now: number, drafts: Map<string, Draft>, redraw: () => void): HTMLElement {
   const look = lookOf(m, now);
   const draft = drafts.get(m.id);
-  const taken = occupants(readTeam() ?? { members: [] });
-  const desk = h(
-    'select',
-    { 'aria-label': `Desk for ${m.name}`, onchange: (e: Event) => sendEdit(host!.net, { id: m.id, desk: (e.target as HTMLSelectElement).value || null }) },
-    h('option', { value: '' }, 'No desk yet'),
-    ...PEOPLE_DESKS.map((d) => {
-      const other = taken.get(d.id);
-      const busy = !!other && other.id !== m.id;
-      return h('option', { value: d.id, disabled: busy }, busy ? `${d.name} (${other.name})` : d.name);
-    }),
-  );
-  desk.value = m.desk ?? '';
+  const desk = deskSelect(m, readTeam()?.members ?? [], planHost(() => {}));
   const row = (label: string, ...kids: (Node | string)[]) => h('div.tw-row', {}, h('span.tw-label', {}, label), h('div.tw-value', {}, ...kids));
   const rows: HTMLElement[] = [m.remote ? row('Desk', 'Remote: shown on the wall screen in the real room') : row('Desk', desk)];
   if (draft) {
@@ -258,7 +171,7 @@ export function openTeam() {
   open = modal;
 
   function render() {
-    if (typing(body)) {
+    if (typing(body) || planBusy()) {
       pending = true;
       return;
     }
@@ -277,7 +190,7 @@ export function openTeam() {
     const toRow = (id: string) => body.querySelector(`[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     body.replaceChildren(
       ...(t?.error ? [h('p.tw-error', { role: 'alert' }, `The team file has a problem: ${t.error}`)] : []),
-      h('div.tw-grid', {}, h('div.tw-left', {}, floorPlan(t, now, toRow), legend()), h('div.tw-right', {}, people, bots)),
+      h('div.tw-grid', {}, h('div.tw-left', {}, planView(t, now, planHost(toRow)), legend()), h('div.tw-right', {}, people, bots)),
     );
   }
   // A redraw that waited for the cursor to leave a field runs once it has.
