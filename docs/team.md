@@ -96,3 +96,23 @@ The app doesn't read calendars itself. Something outside it writes the answer in
 ```
 
 `checkedAt` and `until` are milliseconds since the epoch. An answer from a calendar counts as `unknown` once `until` has passed, or when it was last checked more than two hours ago. A person shown as free is therefore only as current as the last sync.
+
+## Starting the office
+
+On a Windows laptop with Docker, from the repo root in Git Bash:
+
+```bash
+scripts/agentix-office.sh start
+```
+
+That is the only command. It makes sure Docker is running (and says so if it is not), creates the container `agentix-office` if it is missing (from the image `agent-office-dev`, built from `.devcontainer/` if that is missing too), runs `npm ci` if `node_modules` is empty, builds the client once if it never was, starts Vite and the server inside the container, waits until the page answers, and prints the address (http://localhost:5173, only reachable from this computer) and the password. Running it twice does no harm. `status` shows what is running and how much CPU the container uses; `stop` stops the two servers and leaves the container and everything in it alone.
+
+- The container keeps these settings: `--user node`, 4 CPUs, restart unless stopped, the repo mounted at `/workspaces/agent-office`, the volume `agent-office-node-modules` for `node_modules`, and port 5173 on `127.0.0.1` only.
+- **The Claude Code login** is kept in the volume `agentix-office-claude` (mounted at `/home/node/.claude`, with `CLAUDE_CONFIG_DIR` pointing there), so a recreated container is still signed in. When there is no login, `start` prints `docker exec -it agentix-office claude auth login`. The script never reads the login. A container made before this volume existed keeps its login where it was and loses it if removed.
+- **Edits made on Windows are not noticed by default.** The folder mount passes no file-change events into the container (a watcher inside saw nothing), so the server is started without its restart-on-change (`AGENTIX_WATCH=1` turns it on) and a change needs `stop` then `start`. `AGENTIX_POLL=1` makes Vite look at its files once a second instead, which does cost some CPU. Vite is also told to ignore the `.worktrees/` folder.
+- **A second office** next to the real one (to test, say): `AGENTIX_CONTAINER=agentix-office-test AGENTIX_PORT=5198 scripts/agentix-office.sh start`. `AGENTIX_AGENT` gives the server a `--agent` of your own, for trying a made-up worker without running a real one.
+- Nothing in the script deletes anything. To get rid of a container or volume, do it yourself with `docker rm` or `docker volume rm`.
+
+## Starting an agent
+
+The agents' desks are in the two rows next door. You can walk there and press **E** at a desk, or open the team window (**U**) and press **Start an agent**: it closes the window and opens the usual hire window for the first free desk. The new agent then appears at that desk and in the list in the team window, where **Go to** walks you to it and **Terminal** opens its terminal.

@@ -56,6 +56,16 @@ On the machine that runs the office:
 
 ## Run locally
 
+**This fork on Windows (agentix), with Docker:** from the repo root in Git Bash, one command starts everything inside a container, so nothing is installed on the computer:
+
+```bash
+scripts/agentix-office.sh start    # then open http://localhost:5173, password: dev
+scripts/agentix-office.sh status   # what runs, and the address
+scripts/agentix-office.sh stop     # stops the servers; the container and its data stay
+```
+
+If the container is gone it is made again (from the image `agent-office-dev`, built from `.devcontainer/` if that is missing), and `npm ci` runs if `node_modules` is empty. The Claude Code login inside the container lives in its own volume, so it survives that; if it is missing, `start` prints the one command to sign in. The script never deletes a container, a volume or an image. Details and settings are at the top of [`scripts/agentix-office.sh`](scripts/agentix-office.sh) and in [docs/team.md](docs/team.md#starting-the-office).
+
 Install the latest release and start the office:
 
 ```bash
