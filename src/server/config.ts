@@ -153,7 +153,9 @@ Options:
                           "Portland, Oregon" (env AGENT_OFFICE_CITY): the sun
                           keeps its hours of daylight and the weather outside
                           follows its live forecast from open-meteo.com.
-                          Without it the weather is made up. Either way a
+                          Without it the office sits in Munich (the agentix
+                          map), so it calls open-meteo.com too; --city ""
+                          turns that off. Either way a
                           whole day and night go by every hour
       --weather <kind>    Pin the weather: clear, cloudy, rain, storm, snow or
                           fog (env AGENT_OFFICE_WEATHER)
@@ -238,7 +240,8 @@ export function loadConfig(argv: string[]): Config {
   let budgetPause = !!process.env.AGENT_OFFICE_BUDGET_PAUSE && process.env.AGENT_OFFICE_BUDGET_PAUSE !== '0';
   let maxWorkers = process.env.AGENT_OFFICE_MAX_WORKERS || '';
   let webhook = process.env.AGENT_OFFICE_WEBHOOK;
-  let city = process.env.AGENT_OFFICE_CITY || '';
+  // The agentix map is in Munich, so the sun and the weather are Munich's too unless a city says otherwise.
+  let city = process.env.AGENT_OFFICE_CITY || 'Munich';
   let weather = process.env.AGENT_OFFICE_WEATHER || '';
   let realTimeSky = process.env.AGENT_OFFICE_SKY_CLOCK === 'real';
   const iceServers: RTCIceServerLike[] = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
