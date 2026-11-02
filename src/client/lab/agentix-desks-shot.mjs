@@ -38,22 +38,27 @@ const shoot = async (name) => {
   await page.screenshot({ path: `${out}/${name}.png`, timeout: 180000 });
 };
 
-async function enter() {
+async function enter(first) {
   await page.goto(base + '/', { waitUntil: 'domcontentloaded', timeout: 180000 });
-  await page.waitForURL(/\/login/, { timeout: 30000 }).catch(() => {});
+  await page.waitForURL(/\/login/, { timeout: first ? 120000 : 10000 }).catch(() => {});
   if (page.url().includes('/login')) {
     await page.fill('#password', 'dev');
     await page.click('#submit');
     await page.waitForURL((u) => !u.pathname.includes('/login'), { timeout: 120000 }).catch(() => {});
   }
   // A first visit gets the character picker before anything else.
-  await page.getByRole('button', { name: /Enter the office/ }).click({ timeout: 20000 }).catch(() => {});
+  await page.getByRole('button', { name: /Enter the office/ }).click({ timeout: first ? 150000 : 20000 }).catch(() => {});
   await page.waitForTimeout(1500);
   await page.waitForFunction(() => window.__office?.plan?.().id === 'agentix' && window.__office.world(), null, { timeout: 120000, polling: 1000 });
   await page.waitForTimeout(3000);
+  // An office with no floors greets you with a window that takes the keys (U would be typed into it): Esc closes it.
+  for (let i = 0; i < 3 && (await page.locator('.modal').count()); i++) {
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(800);
+  }
 }
 try {
-  await enter();
+  await enter(true);
 } catch (e) {
   checks.loaded = `not loaded: ${e.message.split('\n')[0]}`;
   await page.screenshot({ path: `${out}/not-loaded.png`, timeout: 180000 });
@@ -72,9 +77,14 @@ const figures = () =>
         .map((i) => [i.label, [i.x, i.z]]),
     ),
   );
+/** Whether the figure stands at the desk: looked at for a few seconds, as a slow frame loop gets there late. */
 const figureAt = async (name, desk) => {
-  const f = (await figures())[name];
-  return !!f && Math.hypot(f[0] - DESKS[desk][0], f[1] - DESKS[desk][1]) < 1.5;
+  for (let i = 0; i < 12; i++) {
+    const f = (await figures())[name];
+    if (f && Math.hypot(f[0] - DESKS[desk][0], f[1] - DESKS[desk][1]) < 1.5) return true;
+    await page.waitForTimeout(1000);
+  }
+  return false;
 };
 const center = async (sel) => {
   const b = await page.locator(sel).first().boundingBox();
@@ -172,7 +182,7 @@ await page.evaluate(() => {
 await shoot('7-room-west-side');
 
 // And after a reload, it is all still there.
-await enter();
+await enter(false);
 await page.keyboard.press('KeyU');
 await page.waitForSelector('.tw-plan', { timeout: 20000 }).catch(() => {});
 checks.afterReload_file = same(fileDesks(), { ...start, ada: 'window', ben: null, cy: 'door', di: 'middle' });
