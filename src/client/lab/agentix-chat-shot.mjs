@@ -55,58 +55,65 @@ try {
 }
 checks.loaded = true;
 
-await page.keyboard.press('KeyU');
-await page.waitForSelector('.tw-people .tw-person-card', { timeout: 20000 }).catch(() => {});
-const card = (name) => page.locator('.tw-person-card', { has: page.locator('strong', { hasText: name }) });
-const ada = card('Ada Example');
-const ben = card('Ben Example');
-const you = card('Zed Example');
+try {
+  await page.keyboard.press('KeyU');
+  await page.waitForSelector('.tw-people .tw-person-card', { timeout: 20000 }).catch(() => {});
+  const card = (name) => page.locator('.tw-person-card', { has: page.locator('strong', { hasText: name }) });
+  const ada = card('Ada Example');
+  const ben = card('Ben Example');
+  const you = card('Zed Example');
 
-// Who gets what.
-checks.selfHasNoTalk = (await you.locator('.tw-talk').count()) === 0;
-checks.adaHasTalkLink = (await ada.locator('a.tw-talk-btn').count()) === 1;
-checks.benAsksForLink = (await ben.locator('a.tw-talk-btn').count()) === 0 && (await ben.locator('.tw-talk-paste input').count()) === 1;
-checks.helpLineShown = /copy the address/.test((await ben.locator('.tw-talk-help').textContent()) ?? '');
-const expected = await ada.locator('a.tw-talk-btn').getAttribute('href');
-checks.adaHref = expected;
-checks.adaRelNoopener = /noopener/.test((await ada.locator('a.tw-talk-btn').getAttribute('rel')) ?? '');
-await page.screenshot({ path: `${out}/1-team-window.png`, timeout: 180000 });
+  // Who gets what.
+  checks.selfHasNoTalk = (await you.locator('.tw-talk').count()) === 0;
+  checks.adaHasTalkLink = (await ada.locator('a.tw-talk-btn').count()) === 1;
+  checks.benAsksForLink = (await ben.locator('a.tw-talk-btn').count()) === 0 && (await ben.locator('.tw-talk-paste input').count()) === 1;
+  checks.helpLineShown = /copy the address/.test((await ben.locator('.tw-talk-help').textContent({ timeout: 5000 })) ?? '');
+  const expected = await ada.locator('a.tw-talk-btn').getAttribute('href');
+  checks.adaHref = expected;
+  checks.adaRelNoopener = /noopener/.test((await ada.locator('a.tw-talk-btn').getAttribute('rel')) ?? '');
+  await page.screenshot({ path: `${out}/1-team-window.png`, timeout: 180000 });
 
-// Talk opens the link in a new page, which cannot reach back into the office.
-const [popup] = await Promise.all([context.waitForEvent('page', { timeout: 15000 }), ada.locator('a.tw-talk-btn').click()]);
-await popup.waitForLoadState('domcontentloaded').catch(() => {});
-checks.popupUrl = popup.url();
-checks.popupIsTheLink = popup.url() === expected;
-checks.popupHasNoOpener = (await popup.evaluate(() => window.opener === null)) === true;
-await popup.close();
-await page.bringToFront();
-checks.noHeldKeysAfterReturn = (await page.evaluate(() => window.__office.player.keys.size)) === 0;
-checks.windowStillOpen = (await page.locator('.tw-people').count()) === 1;
+  // Talk opens the link in a new page, which cannot reach back into the office.
+  const [popup] = await Promise.all([context.waitForEvent('page', { timeout: 15000 }), ada.locator('a.tw-talk-btn').click()]);
+  await popup.waitForLoadState('domcontentloaded').catch(() => {});
+  checks.popupUrl = popup.url();
+  checks.popupIsTheLink = popup.url() === expected;
+  checks.popupHasNoOpener = (await popup.evaluate(() => window.opener === null)) === true;
+  await popup.close();
+  await page.bringToFront();
+  checks.noHeldKeysAfterReturn = (await page.evaluate(() => window.__office.player.keys.size)) === 0;
+  checks.windowStillOpen = (await page.locator('.tw-people').count()) === 1;
 
-// Bad links in the paste box: said in place, nothing saved.
-const before = teamFile ? readFileSync(teamFile, 'utf8') : '';
-const box = ben.locator('.tw-talk-paste input');
-for (const bad of ['javascript:alert(1)', 'https://evil.example/chat.google.com', 'http://chat.google.com/dm/X']) {
-  await box.fill(bad);
+  // Bad links in the paste box: said in place, nothing saved.
+  const before = teamFile ? readFileSync(teamFile, 'utf8') : '';
+  const box = ben.locator('.tw-talk-paste input');
+  for (const bad of ['javascript:alert(1)', 'https://evil.example/chat.google.com', 'http://chat.google.com/dm/X']) {
+    await box.fill(bad);
+    await ben.locator('.tw-talk-paste .btn').click();
+  }
+  checks.badLinkSaid = ((await ben.locator('.tw-talk-problem').textContent()) ?? '').length > 0;
+  await page.waitForTimeout(1500);
+  if (teamFile) checks.badLinkNotSaved = readFileSync(teamFile, 'utf8') === before;
+  checks.benStillAsks = (await ben.locator('a.tw-talk-btn').count()) === 0;
+  await page.screenshot({ path: `${out}/2-bad-link.png`, timeout: 180000 });
+
+  // A good one: saved to the file, and the card turns into a Talk button.
+  const good = 'https://chat.google.com/dm/EXAMPLE-BEN';
+  await box.fill(good);
   await ben.locator('.tw-talk-paste .btn').click();
+  await ben.locator('a.tw-talk-btn').waitFor({ timeout: 15000 }).catch(() => {});
+  checks.benTalkAppears = (await ben.locator('a.tw-talk-btn').getAttribute('href').catch(() => null)) === good;
+  if (teamFile) checks.goodLinkSavedToFile = JSON.parse(readFileSync(teamFile, 'utf8')).members.some((m) => m.id === 'ben' && m.chat === good);
+  await page.screenshot({ path: `${out}/3-link-saved.png`, timeout: 180000 });
+
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(800);
+  checks.windowClosesOnEsc = await page.evaluate(() => !document.querySelector('.tw-people'));
+
+} catch (e) {
+  checks.error = e.message.split('\n')[0];
+  checks.windowText = await page.evaluate(() => document.querySelector('.modal')?.textContent?.slice(0, 400) ?? null).catch(() => null);
+  await page.screenshot({ path: `${out}/error.png`, timeout: 60000 }).catch(() => {});
 }
-checks.badLinkSaid = ((await ben.locator('.tw-talk-problem').textContent()) ?? '').length > 0;
-await page.waitForTimeout(1500);
-if (teamFile) checks.badLinkNotSaved = readFileSync(teamFile, 'utf8') === before;
-checks.benStillAsks = (await ben.locator('a.tw-talk-btn').count()) === 0;
-await page.screenshot({ path: `${out}/2-bad-link.png`, timeout: 180000 });
 
-// A good one: saved to the file, and the card turns into a Talk button.
-const good = 'https://chat.google.com/dm/EXAMPLE-BEN';
-await box.fill(good);
-await ben.locator('.tw-talk-paste .btn').click();
-await ben.locator('a.tw-talk-btn').waitFor({ timeout: 15000 }).catch(() => {});
-checks.benTalkAppears = (await ben.locator('a.tw-talk-btn').getAttribute('href').catch(() => null)) === good;
-if (teamFile) checks.goodLinkSavedToFile = JSON.parse(readFileSync(teamFile, 'utf8')).members.some((m) => m.id === 'ben' && m.chat === good);
-await page.screenshot({ path: `${out}/3-link-saved.png`, timeout: 180000 });
-
-await page.keyboard.press('Escape');
-await page.waitForTimeout(800);
-checks.windowClosesOnEsc = await page.evaluate(() => !document.querySelector('.tw-people'));
-
-await finish(Object.values(checks).every((v) => v !== false) && !errors.length ? 0 : 1);
+await finish(Object.values(checks).every((v) => v !== false) && !checks.error && !errors.length ? 0 : 1);

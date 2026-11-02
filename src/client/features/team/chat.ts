@@ -8,6 +8,9 @@ import { h } from '../../ui/dom';
 
 /** People whose link box is open to change a link they already have. (Without a link, the box is always open.) */
 const changing = new Set<string>();
+/** What has been typed into each person's link box, and what is wrong with it: the card is drawn again now and then, which must not lose either. */
+const typed = new Map<string, string>();
+const problems = new Map<string, string>();
 
 /** What the card needs to keep a link: saves it through `people.edit`, and redraws the card. */
 export interface TalkHost {
@@ -34,6 +37,7 @@ export function talkSection(m: TeamMember, host: TalkHost, compact = false): HTM
       h('button.btn.tw-talk-edit', {
         type: 'button',
         onclick: () => {
+          problems.delete(m.id);
           if (changing.has(m.id)) changing.delete(m.id);
           else changing.add(m.id);
           host.redraw();
@@ -47,15 +51,20 @@ export function talkSection(m: TeamMember, host: TalkHost, compact = false): HTM
 
 /** The box to paste the link into, with where to copy it from, and its mistakes said in place. */
 function linkBox(m: TeamMember, host: TalkHost): HTMLElement {
-  const input = h('input', { type: 'text', placeholder: 'Paste the chat link', 'aria-label': `Google Chat link for ${m.name}`, autocomplete: 'off', spellcheck: 'false' });
-  const problem = h('p.tw-talk-problem', { role: 'alert' });
+  const input = h('input', { type: 'text', value: typed.get(m.id) ?? '', placeholder: 'Paste the chat link', 'aria-label': `Google Chat link for ${m.name}`, autocomplete: 'off', spellcheck: 'false' });
+  const problem = h('p.tw-talk-problem', { role: 'alert' }, problems.get(m.id));
   const save = () => {
     const link = chatLink(input.value);
-    if ('error' in link) return void (problem.textContent = link.error);
-    problem.textContent = '';
+    if ('error' in link) {
+      problems.set(m.id, link.error);
+      return void (problem.textContent = link.error);
+    }
+    problems.delete(m.id);
+    typed.delete(m.id);
     changing.delete(m.id);
     host.save(m.id, link.url);
   };
+  input.addEventListener('input', () => typed.set(m.id, input.value));
   input.addEventListener('keydown', (e) => e.key === 'Enter' && (e.preventDefault(), save()));
   return h(
     'div.tw-talk-box',
