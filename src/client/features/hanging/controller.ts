@@ -85,7 +85,7 @@ export class Hanger {
     );
     // Esc frees the mouse before the page ever sees the key; treat that as cancel too.
     document.addEventListener('pointerlockchange', () => {
-      if (this.cur && this.player.view === 'first' && !this.player.locked) this.cancel();
+      if (this.cur && this.player.crosshair && !this.player.locked) this.cancel();
     });
     store.on('decor', () => {
       const moving = this.cur?.moving;
@@ -169,7 +169,7 @@ export class Hanger {
   place(ndc?: THREE.Vector2) {
     const cur = this.cur;
     if (!cur) return;
-    if (ndc && this.player.view === 'third') this.mouse.copy(ndc);
+    if (ndc && !this.player.crosshair) this.mouse.copy(ndc);
     this.update();
     const at = this.at;
     if (!at) return toast('Aim at a wall to hang it there');
@@ -199,7 +199,7 @@ export class Hanger {
   update() {
     const cur = this.cur;
     if (!cur) return;
-    this.raycaster.setFromCamera(this.player.view === 'first' ? new THREE.Vector2(0, 0) : this.mouse, this.camera);
+    this.raycaster.setFromCamera(this.player.crosshair ? new THREE.Vector2(0, 0) : this.mouse, this.camera);
     const hit = aimAtWall(this.raycaster.ray);
     const { w, h } = pictureSize(cur.size, cur.shape);
     const on = hit && clampToWall(hit.wall, hit.u, hit.y, w, h);

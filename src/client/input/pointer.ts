@@ -1,6 +1,6 @@
 /**
- * Pointing at things and using them: what's under the crosshair (first person) or what you're
- * standing at (third), within each kind's reach (see ctx.interactions), the note on the issues board
+ * Pointing at things and using them: what's under the crosshair (first person, mouse captured) or
+ * what you're standing at (third person, or first with the free cursor), within each kind's reach (see ctx.interactions), the note on the issues board
  * the mouse points at, and clicking the world to use what's there.
  */
 import * as THREE from 'three';
@@ -99,7 +99,8 @@ export function installPointer(ctx: Ctx, core: CoreState, parts: PointerParts) {
       if (!shown) continue;
       if (!it || it.off) return null; // a wall, the floor, a plant… is in the way
       // How close you must be to use it is each kind's own (see ctx.interactions).
-      return { it, near: hit.point.distanceTo(eye) <= ctx.interactions.reach(it.kind) + slack, hit };
+      // A colleague's card opens from anywhere you can see them; the rest has to be within reach.
+      return { it, near: it.kind === 'person' || hit.point.distanceTo(eye) <= ctx.interactions.reach(it.kind) + slack, hit };
     }
     return null;
   }
@@ -127,10 +128,23 @@ export function installPointer(ctx: Ctx, core: CoreState, parts: PointerParts) {
     (pointer ??= new THREE.Vector2()).set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   });
   canvas.addEventListener('pointerleave', () => (pointer = null));
+  // With a free cursor, a pointing hand over what a click would use. A ray through the whole office is
+  // dear, so it's cast ten times a second at most, and only while the cursor is over the scene.
+  let hoverAt = 0;
+  let hovering = false;
+  function hoverCursor() {
+    const now = performance.now();
+    if (now - hoverAt < 100) return;
+    hoverAt = now;
+    const over = !!pointer && !player.crosshair && !modalOpen() && !parts.telescope.active && !ctx.activities.busy() && !!aimedAt(pointer, 2.5)?.near;
+    if (over === hovering) return;
+    hovering = over;
+    canvas.style.cursor = over ? 'pointer' : '';
+  }
   // What you're pointing at (first person) or standing at (third), and what the hint bar says about it.
   ctx.ticks.add('aim', () => {
     const { seating, hoops } = parts;
-    const firstPerson = player.view === 'first';
+    const firstPerson = player.crosshair;
     aimedNote = null;
     if (modalOpen() || parts.telescope.active || ctx.activities.busy()) target = null;
     else if (firstPerson) {
@@ -146,6 +160,7 @@ export function installPointer(ctx: Ctx, core: CoreState, parts: PointerParts) {
       }
     }
     parts.boards.issuesTex.lift(aimedNote?.number ?? null);
+    hoverCursor();
     parts.hintbar.renderHint();
     parts.hintbar.renderCrosshair();
   });
@@ -168,7 +183,7 @@ export function installPointer(ctx: Ctx, core: CoreState, parts: PointerParts) {
       hanger.place(ndc);
       return;
     }
-    if (player.view === 'first') {
+    if (player.crosshair) {
       // Reach out even at nothing, like poking the air.
       reach();
       if (target) interact(target, 'E');

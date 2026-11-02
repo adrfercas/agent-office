@@ -1,7 +1,7 @@
 import './settings.css';
 import type { Net } from '../net';
 import type { OfficeSound } from '../sound';
-import { store, type NeedsYouSound, type Settings, type ViewMode } from '../state';
+import { store, type MouseMode, type NeedsYouSound, type Settings, type ViewMode } from '../state';
 import { askNotifyPermission, notifyPermission, type DesktopNotifier } from '../notify';
 import type { ThemePick, WebhookKind } from '../../shared/protocol';
 import { THEME_PICKS } from '../../shared/theme';
@@ -14,7 +14,7 @@ import { outsideSetting } from './settings-sky';
 import { choiceRow } from './settings-rows';
 
 const VIEWS: [ViewMode, string, string][] = [
-  ['first', '👀 First person', 'See through your own eyes. Click the office to look around with the mouse and click things to use them. Esc frees the mouse.'],
+  ['first', '👀 First person', 'See through your own eyes. Drag to look around and click things to use them. The mouse setting below can capture the mouse instead.'],
   ['third', '🎥 Third person', 'Follow your character from behind. Drag to orbit the camera, scroll to zoom, and click things to use them.'],
 ];
 
@@ -115,6 +115,8 @@ export function openSettings(net: Net, settings: Settings, onChange: (s: Setting
     settings = { ...settings, ...some };
     onChange(settings);
   };
+  // First person: the cursor stays free, or a click on the office captures the mouse for looking around.
+  const mouseRow = choiceRow<MouseMode>('Mouse in first person', [['free', '🖱️ Free cursor'], ['captured', '🎯 Captured mouse-look']], () => settings.mouse, (mouse) => change({ mouse }));
   // Voice chat: an open mic, or muted until you hold V.
   const talkRow = choiceRow('Voice chat', [[false, '🎙️ Open mic'], [true, '✋ Push to talk']], () => settings.pushToTalk, (pushToTalk) => change({ pushToTalk }));
   const musicRow = volumeRow('Jukebox volume', 'music', 'musicMuted');
@@ -446,6 +448,7 @@ export function openSettings(net: Net, settings: Settings, onChange: (s: Setting
     you: [
       setting('Your character', null, character),
       setting('Camera view', 'you', seg, note),
+      setting('Mouse in first person', 'you', mouseRow, h('p.setting-note', {}, 'Free cursor: the cursor stays where you see it, a click uses what is under it and dragging with the left button looks around. Captured mouse-look: a click on the office grabs the mouse and moving it looks around; Esc gives it back. Third person always uses the free cursor.')),
       setting('Signed in', null, h('div.volume', {}, signOut), h('p.setting-note', {}, account ? `As ${account.name}, with your own account (${account.role}).` : 'With the shared office password.')),
     ],
     sound: [

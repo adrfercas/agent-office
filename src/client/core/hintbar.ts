@@ -47,7 +47,7 @@ export function installHintBar(ctx: Ctx, core: CoreState, parts: Pick<Parts, 'po
     const target = parts.pointer.target();
     const { finePointer } = parts.focus;
     const relookOnKey = parts.focus.relookOnKey();
-    const show = player.view === 'first' && !modalOpen() && !ctx.activities.any('takesCamera');
+    const show = player.crosshair && !modalOpen() && !ctx.activities.any('takesCamera');
     const free = show && finePointer && player.canLock && !player.locked;
     const k = `${show}|${!!target}|${free}|${relookOnKey}`;
     if (k === crossKey) return;
