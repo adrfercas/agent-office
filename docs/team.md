@@ -42,9 +42,17 @@ Nothing is filled in by guessing: what isn't known stays empty or `unknown`.
 ## Using it
 
 - **U**, or **Team** in the ☰ menu, opens the team window: a small floor plan, the people, and the agents working with you. An agent's row can take you to it or open its terminal.
-- Give someone a desk from the team window. Until then, they stand in the corridor under the "no desk yet" sign.
-- **E** at someone opens their card.
-- Only admins can change the team.
+- **Give someone a desk by dragging.** On the floor plan in the team window, every person with a desk is a round marker, and everyone without one is a name in the **No desk yet** tray under the plan. Press on a marker or a name, drag it onto a desk (the desk lights up green) and let go.
+  - A free desk is given to them. Their old desk, if they had one, is free again.
+  - A desk someone already has (it lights up amber, and the name on the dragged label shows both names with ⇄ between) is a **swap**: the two trade places, in one change, so nobody is left without a desk and two people never share one. If the person you drag has no desk, whoever you drop them on goes to the tray.
+  - Dropping on the tray takes the desk away. Dropping anywhere else puts the marker back and changes nothing.
+  - A plain click on a marker, without dragging, takes you to that person's card.
+  - Remote people aren't on the plan and can't be dragged.
+  - The figure moves in the 3D room at once, in every open window, and the change is kept in the team file. If the server refuses, the marker goes back and the reason shows under the plan.
+- **Without a mouse**, use the **Desk** dropdown on a person's card. It does the same: a desk someone has is listed as "swap with" and their name, and choosing it swaps.
+- Until someone has a desk, they stand in the corridor under the "no desk yet" sign in the room.
+- **E** at someone in the room opens their card.
+- Only admins can change the team. Whoever signs in with the shared password is an admin. Anyone else sees the markers as clickable only: pressing and dragging one says that only admins can change the team, and the dropdown is greyed out.
 
 ## The desks
 
