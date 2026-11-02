@@ -1,0 +1,13 @@
+{
+  "name": "agent-office",
+  "build": { "dockerfile": "Dockerfile" },
+  "remoteUser": "node",
+  "mounts": ["source=agent-office-node-modules,target=${containerWorkspaceFolder}/node_modules,type=volume"],
+  "containerEnv": { "LAB_BROWSER": "chromium" },
+  "postCreateCommand": "sudo chown node node_modules && git config --global --add safe.directory ${containerWorkspaceFolder} && npm ci --no-audit --no-fund && npx playwright-core install --with-deps chromium",
+  "forwardPorts": [5173, 4600],
+  "portsAttributes": {
+    "5173": { "label": "Office (npm run dev)", "onAutoForward": "notify" },
+    "4600": { "label": "Office server", "onAutoForward": "silent" }
+  }
+}
