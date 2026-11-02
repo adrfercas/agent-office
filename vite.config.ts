@@ -62,6 +62,12 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    watch: {
+      // Other branches' worktrees live inside the repo folder: scanning them is slow, and they are not this build.
+      ignored: ['**/.worktrees/**'],
+      // Docker on Windows passes no file-change events through the folder mount; scripts/agentix-office.sh polls instead when asked.
+      ...(process.env.AGENTIX_POLL === '1' ? { usePolling: true, interval: 1000 } : {}),
+    },
     proxy: {
       // Not the string shorthand: that sets changeOrigin, so /api would see Host :4600 while /ws sees
       // Vite's port, and the session cookie (named per port, see auth.ts) would never reach the socket.

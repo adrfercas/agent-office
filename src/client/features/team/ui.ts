@@ -21,6 +21,8 @@ export interface TeamHost {
   goTo(workerId: string): void;
   /** Opens an agent's terminal. */
   openTerminal(workerId: string): void;
+  /** Starts an agent at the first free desk, through the usual hire window. */
+  startAgent(): void;
 }
 
 interface Draft {
@@ -271,7 +273,7 @@ export function openTeam() {
     if (!t) people.append(h('p.tw-empty-block', {}, 'Waiting for the office to say who is on the team.'));
     else if (!t.members.length) people.append(h('p.tw-empty-block', {}, 'No team recorded yet. Add the people to the office’s team file (see docs/team.md) and they show up here.'));
     else for (const m of t.members) people.append(personCard(m, now, drafts, render));
-    const bots = h('section.tw-agents', {}, h('h3', {}, '🤖 Agents working with you', h('small', {}, ' started from this office')));
+    const bots = h('section.tw-agents', {}, h('h3', {}, '🤖 Agents working with you', h('small', {}, ' started from this office')), h('button.btn.primary.tw-start', { type: 'button', onclick: () => (modal.close(), host!.startAgent()) }, 'Start an agent'));
     if (!agents.length) bots.append(h('p.tw-empty-block', {}, 'No agents are running on this floor.'));
     for (const w of agents) bots.append(agentCard(w, now));
     const toRow = (id: string) => body.querySelector(`[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });

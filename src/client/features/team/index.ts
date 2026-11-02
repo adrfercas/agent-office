@@ -1,6 +1,7 @@
 import type { Ctx } from '../../core/context';
 import type { Parts } from '../../core/parts';
 import { store } from '../../state';
+import { toast } from '../../ui/dom';
 import { bindTeamUi, openPersonCard, openTeam, refreshTeamUi } from './ui';
 
 /*
@@ -10,13 +11,18 @@ import { bindTeamUi, openPersonCard, openTeam, refreshTeamUi } from './ui';
  */
 
 /** Registers U, and keeps an open team window up to date. */
-export function installTeam(ctx: Ctx, parts: Pick<Parts, 'waiting'>) {
+export function installTeam(ctx: Ctx, parts: Pick<Parts, 'waiting' | 'actions'>) {
   const { net } = ctx;
   bindTeamUi({
     net,
     plan: () => ctx.plan(),
     goTo: (id) => void parts.waiting.goToWorker(id),
     openTerminal: (id) => parts.waiting.openWorkerTerminal(id),
+    startAgent: () => {
+      const desk = parts.actions.firstFreeSeat();
+      if (desk) parts.actions.hireAtDesk(desk);
+      else toast('Every desk on this floor is taken', 'warn');
+    },
   });
   // Only the agentix office has a team to show.
   const here = () => ctx.plan().id === 'agentix';

@@ -10,6 +10,7 @@
 .tw-error { margin: 0 0 12px; padding: 8px 12px; border: 2px solid var(--ink); border-radius: 10px; background: #ffd6e0; font-weight: 800; font-size: 14px; }
 .tw-empty, .tw-empty-block { color: var(--muted); font-style: italic; font-weight: 700; }
 .tw-empty-block { margin: 6px 0 12px; font-size: 14px; }
+.tw-start { margin: 4px 0 10px; }
 
 /* The plan */
 .tw-plan { width: 100%; height: auto; display: block; border: 3px solid var(--ink); border-radius: 14px; background: var(--paper-2); }
