@@ -1,0 +1,9 @@
+{
+  "members": [
+    { "id": "ada-example", "name": "Ada Example", "role": "Engineer", "look": "woman", "desk": "west", "workingOn": "Example work", "goodAt": ["examples"] },
+    { "id": "bo-sample", "name": "Bo Sample", "role": "Designer", "look": "man", "desk": "whiteboard", "workingOn": "Sample work", "goodAt": [] },
+    { "id": "cy-test", "name": "Cy Test", "role": "Operations", "look": "man", "desk": "door", "workingOn": "", "goodAt": [] },
+    { "id": "di-demo", "name": "Di Demo", "role": "Sales", "look": "woman", "desk": "armoire", "workingOn": "", "goodAt": [] },
+    { "id": "ed-mock", "name": "Ed Mock", "role": "Support", "look": "man", "desk": "board-1", "workingOn": "", "goodAt": [] }
+  ]
+}
