@@ -4,13 +4,15 @@
  * else's (see installLoop), so within a phase they come first.
  */
 import * as THREE from 'three';
-import { SlowFrames } from '../framerate';
+import { SLOW_FRAMES, SlowFrames } from '../framerate';
 import { EYE_HEIGHT } from '../player';
 import { renderCaffeine } from '../features/coffee/meter';
 import type { Ctx } from './context';
 import type { CoreState } from './ctx';
 import type { Parts } from './parts';
 import type { Frame } from './registry';
+import { installGraphics } from './graphics';
+import { listenForInput, pacer, type Pacer } from './pacing';
 import { FOV } from './scene';
 import { FirstPersonBody } from '../world/character/person-first';
 
@@ -24,6 +26,10 @@ export interface LoopDeps {
 
 /** Registers the office's own ticks: install it before anything else registers one. */
 export function installLoop(ctx: Ctx, core: CoreState, parts: Pick<Parts, 'stage' | 'coffee' | 'peers' | 'views' | 'worlds' | 'place'>, deps: LoopDeps) {
+  // How often it's drawn depends on whether anyone is using it (see core/pacing.ts).
+  pacer.busy = () => ctx.player.moving || core.trip !== null;
+  listenForInput(pacer);
+  installGraphics(ctx, () => parts.stage);
   // Registered before anything else's, so within a phase they come first.
   ctx.ticks.add('pre', watchFrameRate);
   ctx.ticks.add('pre', feelTheCoffee);
@@ -50,7 +56,8 @@ export function installLoop(ctx: Ctx, core: CoreState, parts: Pick<Parts, 'stage
 
   /** Frames coming too slowly for the 3D to be any fun: the 2D view is offered. */
   function watchFrameRate({ now, delta }: Frame) {
-    if (slowFrames.frame(now, delta * 1000)) deps.offer2d('slow');
+    // Frames held back on purpose (see core/pacing.ts) are long, and say nothing about this computer.
+    if (slowFrames.frame(now, pacer.relaxed ? SLOW_FRAMES.gapMs : delta * 1000)) deps.offer2d('slow');
   }
 
   /** Coffee, and the view's shake easing off. */
@@ -209,16 +216,47 @@ export function installLoop(ctx: Ctx, core: CoreState, parts: Pick<Parts, 'stage
 
 /**
  * The frame loop: each frame, every phase's ticks, in order (see TICK_PHASES, and installLoop). Its
- * clock starts now; hand what it returns to requestAnimationFrame to start it.
+ * clock starts now; hand what it returns to requestAnimationFrame to start it. How often a frame is
+ * drawn is the pacer's say (core/pacing.ts): every one the screen has while someone is using the office,
+ * fewer when it's left alone, none while the tab is hidden. In between the loop sleeps on a timer
+ * instead of waking at every vsync, and input wakes it.
  */
-export function frameLoop(ctx: Ctx, loading: { drew(): void }): (ts?: number) => void {
+export function frameLoop(ctx: Ctx, loading: { drew(): void }, pace: Pacer = pacer): (ts?: number) => void {
   const timer = new THREE.Timer();
+  let last = -Infinity;
+  let sleeper = 0;
+  let parked = false;
+  /** Half a vsync (ms): a frame this close to due is drawn now rather than a whole vsync later. */
+  const CLOSE = 4;
+  function next() {
+    const wait = pace.wait(performance.now(), last);
+    if (wait === Infinity) parked = true;
+    else if (wait > CLOSE * 2) {
+      sleeper = window.setTimeout(() => {
+        sleeper = 0;
+        requestAnimationFrame(frame);
+      }, wait - CLOSE * 2);
+    } else requestAnimationFrame(frame);
+  }
+  pace.wake = () => {
+    if (sleeper) {
+      clearTimeout(sleeper);
+      sleeper = 0;
+      requestAnimationFrame(frame);
+    } else if (parked) {
+      parked = false;
+      requestAnimationFrame(frame);
+    }
+  };
   function frame(ts?: number) {
+    const now = performance.now();
+    if (pace.wait(now, last) > CLOSE) return next();
+    last = now;
     timer.update(ts);
     const delta = timer.getDelta();
-    ctx.ticks.run({ delta, dt: Math.min(delta, 0.1), t: timer.getElapsed(), now: performance.now() });
+    ctx.ticks.run({ delta, dt: Math.min(delta, 0.1), t: timer.getElapsed(), now });
     loading.drew();
-    requestAnimationFrame(frame);
+    next();
   }
   return frame;
 }

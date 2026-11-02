@@ -48,10 +48,16 @@ export const HUD_DEFAULTS: Record<HudPanel, boolean> = { workers: false, people:
 export const NEEDS_YOU_SOUNDS = ['off', 'once', 'remind'] as const;
 export type NeedsYouSound = (typeof NEEDS_YOU_SOUNDS)[number];
 
+/** How much the 3D office is drawn with: Light spares the computer (lower pixel ratio, calmer shadows), Full is how it always looked. */
+export const GRAPHICS = ['light', 'full'] as const;
+export type Graphics = (typeof GRAPHICS)[number];
+
 export interface Settings {
   view: ViewMode;
   /** How the mouse works in first person; free unless you chose otherwise. */
   mouse: MouseMode;
+  /** How much the 3D office is drawn with (Light unless you picked Full). */
+  graphics: Graphics;
   /** Office sounds, 0–1. */
   volume: number;
   muted: boolean;
@@ -132,11 +138,12 @@ export function rememberSpot(s: Spot) {
 }
 
 export function loadSettings(): Settings {
-  const s: Settings = { view: 'first', mouse: 'free', volume: 0.7, muted: false, music: 0.5, musicMuted: false, pageTurns: true, pushToTalk: false, notify: true, needsYouSound: 'once', hud: { ...HUD_DEFAULTS }, pins: [] };
+  const s: Settings = { view: 'first', mouse: 'free', graphics: 'light', volume: 0.7, muted: false, music: 0.5, musicMuted: false, pageTurns: true, pushToTalk: false, notify: true, needsYouSound: 'once', hud: { ...HUD_DEFAULTS }, pins: [] };
   try {
     const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? 'null');
     if (saved?.view === 'first' || saved?.view === 'third') s.view = saved.view;
     if (saved?.mouse === 'free' || saved?.mouse === 'captured') s.mouse = saved.mouse;
+    if (GRAPHICS.includes(saved?.graphics)) s.graphics = saved.graphics;
     if (typeof saved?.volume === 'number' && Number.isFinite(saved.volume)) s.volume = Math.max(0, Math.min(1, saved.volume));
     if (typeof saved?.muted === 'boolean') s.muted = saved.muted;
     if (typeof saved?.music === 'number' && Number.isFinite(saved.music)) s.music = Math.max(0, Math.min(1, saved.music));

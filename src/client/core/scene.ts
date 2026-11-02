@@ -4,12 +4,13 @@
  */
 import * as THREE from 'three';
 import { OutlineEffect } from 'three/examples/jsm/effects/OutlineEffect.js';
-import { store } from '../state';
+import { loadSettings, store } from '../state';
 import { Holiday } from '../world/holiday';
 import { buildOffice } from '../world/office';
 import type { Office } from '../world/types';
 import { HAZE_MAX, Sky } from '../world/sky';
 import type { Ctx } from './context';
+import { applyGraphics } from './graphics';
 import { noOutline } from './outline';
 
 /** How far the camera sees in the office: as far as the haze ever is, from the top floor. */
@@ -52,7 +53,6 @@ export function noWebGL(): Promise<never> {
 
 /** Sets up the renderer on `canvas`, and builds the scene: its lights, the camera, the office, the sky. */
 export function createScene(canvas: HTMLCanvasElement, renderer: THREE.WebGLRenderer): Stage {
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
