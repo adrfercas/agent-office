@@ -13,10 +13,11 @@ import { openPromptEditor, rewrittenPrompts } from './prompts';
 import { outsideSetting } from './settings-sky';
 import { choiceRow } from './settings-rows';
 import { GRAPHICS_CHOICES, GRAPHICS_NOTE } from './settings-graphics';
+import { LOOK_SPEED_NOTE, lookSpeedRow } from './settings-navigation';
 
 const VIEWS: [ViewMode, string, string][] = [
-  ['first', '👀 First person', 'See through your own eyes. Drag to look around and click things to use them. The mouse setting below can capture the mouse instead.'],
-  ['third', '🎥 Third person', 'Follow your character from behind. Drag to orbit the camera, scroll to zoom, and click things to use them.'],
+  ['first', '👀 First person', 'See through your own eyes. Drag or swipe with two fingers to look around, pinch or scroll to zoom, and click things to use them. The mouse setting below can capture the mouse instead.'],
+  ['third', '🎥 Third person', 'Follow your character from behind. Drag or swipe with two fingers to orbit the camera, pinch or scroll to zoom, and click things to use them.'],
 ];
 
 const THEME_LABEL: Record<ThemePick, string> = { auto: '📅 By the calendar', halloween: '🎃 Halloween', christmas: '🎄 Christmas', off: 'Off' };
@@ -450,6 +451,7 @@ export function openSettings(net: Net, settings: Settings, onChange: (s: Setting
       setting('Your character', null, character),
       setting('Camera view', 'you', seg, note),
       setting('Mouse in first person', 'you', mouseRow, h('p.setting-note', {}, 'Free cursor: the cursor stays where you see it, a click uses what is under it and dragging with the left button looks around. Captured mouse-look: a click on the office grabs the mouse and moving it looks around; Esc gives it back. Third person always uses the free cursor.')),
+      setting('Look speed', 'you', lookSpeedRow(() => settings.lookSpeed, (lookSpeed) => change({ lookSpeed })), h('p.setting-note', {}, LOOK_SPEED_NOTE)),
       setting('Graphics', 'you', choiceRow('Graphics', GRAPHICS_CHOICES, () => settings.graphics, (graphics) => change({ graphics })), h('p.setting-note', {}, GRAPHICS_NOTE)),
       setting('Signed in', null, h('div.volume', {}, signOut), h('p.setting-note', {}, account ? `As ${account.name}, with your own account (${account.role}).` : 'With the shared office password.')),
     ],

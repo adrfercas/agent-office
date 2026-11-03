@@ -72,7 +72,7 @@ export class Hanger {
       this.mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     });
     // The wheel sizes the picture instead of zooming the camera. On window, in the capture phase,
-    // so it runs before the player's own wheel handler on the canvas.
+    // so it runs before the zoom's wheel handler on the canvas (see features/navigation).
     window.addEventListener(
       'wheel',
       (e) => {

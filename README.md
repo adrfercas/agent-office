@@ -379,7 +379,8 @@ deploy/coolify.sh ssh 'node /opt/agent-office/bin/agent-office.js accounts invit
 | --- | --- |
 | W A S D | Walk (hold Shift to run) |
 | Space | Jump |
-| Mouse (left button) | The cursor stays free: click a person or thing to use it, drag to look around (first person) or orbit the camera (third person), wheel to zoom in third person. The right button is left alone for your browser's mouse gestures. ⚙️ Settings → **Mouse in first person** can capture the mouse for looking around instead (a click grabs it, Esc gives it back) |
+| Mouse (left button) | The cursor stays free: click a person or thing to use it, drag to look around (first person) or orbit the camera (third person), wheel to zoom (in first person it narrows the view, in third it moves the camera). The right button is left alone for your browser's mouse gestures. ⚙️ Settings → **Mouse in first person** can capture the mouse for looking around instead (a click grabs it, Esc gives it back) |
+| Touchpad | Swipe with two fingers to look around (first person) or orbit the camera (third person), pinch to zoom. ⚙️ Settings → **Look speed** sets how fast dragging, swiping and a captured mouse turn the view |
 | E | Interact: hire a worker, open its terminal, read a board, sit down, ride the elevator |
 | P | Give a task to a new worker, or to the one at this desk |
 | C | See a worker's changes: diff, commit, open a PR |

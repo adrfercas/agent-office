@@ -66,6 +66,8 @@ export abstract class PlayerInput {
   enabled = true;
   /** False while the mouse picks something else (an emote on the wheel), so it doesn't turn the camera. */
   mouseLook = true;
+  /** How fast the view turns against the usual speed: the look speed setting, and slower zoomed in (see features/navigation). */
+  lookScale = 1;
 
   constructor(private dom: HTMLElement) {
     window.addEventListener('keydown', (e) => {
@@ -146,11 +148,7 @@ export abstract class PlayerInput {
       this.drag.x = e.clientX;
       this.drag.y = e.clientY;
       this.drag.moved += Math.abs(dx) + Math.abs(dy);
-      if (this.view === 'first') this.look(dx * DRAG_LOOK_SPEED, dy * DRAG_LOOK_SPEED);
-      else {
-        this.camYaw -= dx * 0.006;
-        this.camPitch = THREE.MathUtils.clamp(this.camPitch + dy * 0.004, 0.05, 1.3);
-      }
+      this.lookBy(dx, dy);
     });
     document.addEventListener('pointerlockchange', () => {
       this.lockPending = false;
@@ -172,14 +170,15 @@ export abstract class PlayerInput {
       if (!this.enabled) this.unlock();
     });
     document.addEventListener('pointerlockerror', () => this.refused());
-    dom.addEventListener(
-      'wheel',
-      (e) => {
-        if (this.view === 'third') this.camDist = THREE.MathUtils.clamp(this.camDist + e.deltaY * 0.01, 2.5, 16);
-        e.preventDefault();
-      },
-      { passive: false },
-    );
+  }
+
+  /** Turns the view as dragging this many pixels would: your head in first person, the camera's orbit in third. */
+  lookBy(dx: number, dy: number) {
+    if (this.view === 'first') this.look(dx * DRAG_LOOK_SPEED, dy * DRAG_LOOK_SPEED);
+    else {
+      this.camYaw -= dx * 0.006 * this.lookScale;
+      this.camPitch = THREE.MathUtils.clamp(this.camPitch + dy * 0.004 * this.lookScale, 0.05, 1.3);
+    }
   }
 
   get locked(): boolean {
@@ -283,8 +282,8 @@ export abstract class PlayerInput {
   }
 
   private look(dx: number, dy: number) {
-    this.camYaw -= dx;
-    this.lookPitch = THREE.MathUtils.clamp(this.lookPitch - dy, -1.45, 1.45);
+    this.camYaw -= dx * this.lookScale;
+    this.lookPitch = THREE.MathUtils.clamp(this.lookPitch - dy * this.lookScale, -1.45, 1.45);
   }
 }
 
