@@ -33,9 +33,9 @@ agent-office [dir] [options]
       --budget-pause      ...and nobody can hire a new worker until the next day
       --max-workers <n>   Run at most n workers at once, across every floor (env AGENT_OFFICE_MAX_WORKERS)
       --webhook <url>     Post to this Slack / Discord webhook when a worker needs input or finishes
-      --city <name>       Put the office in a real city: its sun and live weather (open-meteo.com)
+      --city <name>       Put the office in a real city: its sun and live weather (open-meteo.com). Munich unless you say otherwise; --city "" turns it off and makes the weather up (env AGENT_OFFICE_CITY)
       --weather <kind>    Pin the weather: clear, cloudy, rain, storm, snow or fog
-      --real-time-sky     Start the sky on the real clock, not a day an hour (env AGENT_OFFICE_SKY_CLOCK=real; ⚙️ Settings can switch it)
+      --hourly-sky        Start the sky on a whole day and night every hour, not the real clock (env AGENT_OFFICE_SKY_CLOCK=hourly; ⚙️ Settings can switch it)
 
 agent-office setup [--projects <dir>] [--project <owner/repo>]... [--home <dir>]
 

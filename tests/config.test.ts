@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { loadConfig } from '../src/server/config.js';
+import { skyNow, sunPosition } from '../src/shared/sun.js';
 
 /** loadConfig with a throwaway --home, turning process.exit into a throw so a bad flag can be tested. */
 function load(t: { after(fn: () => void): void }, ...argv: string[]) {
@@ -61,4 +62,37 @@ test('TURN servers come from --turn and from AGENT_OFFICE_TURN', (t) => {
     { urls: 'turn:office.example.com:3478?transport=tcp', username: 'office', credential: 'p@ss' },
     { urls: 'turns:relay.example.com:5349' },
   ]);
+});
+
+test('the sky is on the real clock in Munich unless told otherwise', (t) => {
+  const saved = { city: process.env.AGENT_OFFICE_CITY, clock: process.env.AGENT_OFFICE_SKY_CLOCK };
+  t.after(() => {
+    for (const [k, v] of [['AGENT_OFFICE_CITY', saved.city], ['AGENT_OFFICE_SKY_CLOCK', saved.clock]] as const) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  });
+  delete process.env.AGENT_OFFICE_CITY;
+  delete process.env.AGENT_OFFICE_SKY_CLOCK;
+  const standard = load(t);
+  assert.equal(standard.city, 'Munich');
+  assert.equal(standard.realTimeSky, true);
+  assert.equal(load(t, '--city', 'Berlin').city, 'Berlin');
+  assert.equal(load(t, '--city', '').city, undefined);
+  assert.equal(load(t, '--hourly-sky').realTimeSky, false);
+  process.env.AGENT_OFFICE_CITY = '';
+  process.env.AGENT_OFFICE_SKY_CLOCK = 'hourly';
+  const fromEnv = load(t);
+  assert.equal(fromEnv.city, undefined);
+  assert.equal(fromEnv.realTimeSky, false);
+});
+
+test('Munich gets its real sunrise and sunset on the real clock', () => {
+  const MUNICH = { lat: 48.13743, lon: 11.57549 };
+  const sunUp = (iso: string) => sunPosition(skyNow(Date.parse(iso), { utcOffset: 60, realTime: true }), MUNICH.lat, MUNICH.lon).el > (-0.83 * Math.PI) / 180;
+  // The shortest day there: up at 08:02 and down at 16:23, Munich time.
+  assert.equal(sunUp('2026-12-21T07:55:00+01:00'), false);
+  assert.equal(sunUp('2026-12-21T08:10:00+01:00'), true);
+  assert.equal(sunUp('2026-12-21T16:15:00+01:00'), true);
+  assert.equal(sunUp('2026-12-21T16:30:00+01:00'), false);
 });

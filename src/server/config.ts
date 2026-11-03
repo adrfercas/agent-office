@@ -55,11 +55,11 @@ export interface Config {
   maxWorkers?: number;
   /** Slack / Discord webhook to post to when a worker needs input or finishes ('' turns it off). */
   webhook?: string;
-  /** Where the office is: its sun and live weather follow this city's forecast. */
+  /** Where the office is: its sun and live weather follow this city's forecast. Munich unless told otherwise; unset with --city "". */
   city?: string;
   /** Weather pinned for good, instead of made up or forecast. */
   weather?: Weather;
-  /** The sky keeps real time (a day a day), instead of a whole day and night every hour. */
+  /** The sky keeps real time (a day a day) unless told to go through a whole day and night every hour. */
   realTimeSky: boolean;
 }
 
@@ -153,14 +153,14 @@ Options:
                           "Portland, Oregon" (env AGENT_OFFICE_CITY): the sun
                           keeps its hours of daylight and the weather outside
                           follows its live forecast from open-meteo.com.
-                          Without it the weather is made up. Either way a
-                          whole day and night go by every hour
+                          Munich unless you say otherwise; --city "" turns it
+                          off, and the weather is made up instead
       --weather <kind>    Pin the weather: clear, cloudy, rain, storm, snow or
                           fog (env AGENT_OFFICE_WEATHER)
-      --real-time-sky     Start the sky on the office's real clock, so it's night when
-                          it's night there, instead of a day and night every hour
+      --hourly-sky        Start the sky on a whole day and night every hour, instead
+                          of the real clock, where it's night when it's night there
                           (⚙️ Settings can switch it)
-                          (env AGENT_OFFICE_SKY_CLOCK=real)
+                          (env AGENT_OFFICE_SKY_CLOCK=hourly)
   -h, --help              Show this help
 
 Started in a terminal, the office opens in your browser already signed in, with
@@ -238,9 +238,9 @@ export function loadConfig(argv: string[]): Config {
   let budgetPause = !!process.env.AGENT_OFFICE_BUDGET_PAUSE && process.env.AGENT_OFFICE_BUDGET_PAUSE !== '0';
   let maxWorkers = process.env.AGENT_OFFICE_MAX_WORKERS || '';
   let webhook = process.env.AGENT_OFFICE_WEBHOOK;
-  let city = process.env.AGENT_OFFICE_CITY || '';
+  let city = process.env.AGENT_OFFICE_CITY ?? 'Munich';
   let weather = process.env.AGENT_OFFICE_WEATHER || '';
-  let realTimeSky = process.env.AGENT_OFFICE_SKY_CLOCK === 'real';
+  let realTimeSky = process.env.AGENT_OFFICE_SKY_CLOCK !== 'hourly';
   const iceServers: RTCIceServerLike[] = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
   // A container can't take --turn (deploy/container/compose.yaml), so the TURN servers come from the environment too.
   for (const url of (process.env.AGENT_OFFICE_TURN ?? '').split(/\s+/).filter(Boolean)) iceServers.push(parseTurn(url));
@@ -325,6 +325,9 @@ export function loadConfig(argv: string[]): Config {
         break;
       case '--real-time-sky':
         realTimeSky = true;
+        break;
+      case '--hourly-sky':
+        realTimeSky = false;
         break;
       default:
         if (a.startsWith('-')) {
