@@ -3,8 +3,9 @@ import type { SkyState, Weather } from '../shared/protocol.js';
 import { guessPlace } from '../shared/sun.js';
 
 // The sky over the office: where it is (which sets when the sun rises and sets) and the weather.
-// With --city, both follow that city's live forecast from open-meteo.com (free, no key needed).
-// Without one, the office sits in the host's time zone and the weather wanders by itself, one
+// With a city (Munich unless told otherwise, see config.ts), both follow its live forecast from
+// open-meteo.com (free, no key needed).
+// With --city "", the office sits in the host's time zone and the weather wanders by itself, one
 // spell after another, with snow only in winter. --weather pins it either way.
 
 const FORECAST_MS = 15 * 60_000;
