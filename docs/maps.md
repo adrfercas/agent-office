@@ -2,9 +2,44 @@
 
 Back to the [README](../README.md).
 
-The office is one map the building can be. Under **⚙️ Settings → 🏢 Building → Map**, anyone can change it for everyone, on every floor: to the **🏰 Castle**, to the **🚀 Space station**, or to a map of your own. Everything that makes the office work comes along: the workers and their terminals, the issues and PR boards, the task queue and its agent, the services board, meetings, the merge gong, the budget and the limits. Workers keep their seats, since every map places the same seats (see [Seats](#seats)), so a map can change while they work.
+The office is one map the building can be. Under **⚙️ Settings → 🏢 Building → Map**, anyone can change it for everyone, on every floor: to the **🥨 agentix** (the default), to the **🏰 Castle**, to the **🚀 Space station**, or to a map of your own. Everything that makes the office work comes along: the workers and their terminals, the issues and PR boards, the task queue and its agent, the services board, meetings, the merge gong, the budget and the limits. Workers keep their seats, since every map places the same seats (see [Seats](#seats)), so a map can change while they work.
 
 The office has plenty of its own that a map doesn't (the elevator, the balcony, the rooftop bar, the lounge, the dog, pictures on the walls). On another map you go to another project from the floor list in the top-left corner (or **☰ → Floors**), and each project's hall is dressed in its own colors: the castle's banners and shields, the station's lines of light.
+
+## agentix
+
+The agentix office at Widenmayerstraße 48 in Munich's Lehel, one floor up, with its window looking out over the trees. It is the fork's default map. Part of it is real and part of it is made up, and this section says which.
+
+**What is real.** One room, the one in the north-west corner of the map: the high old-building room with cream walls, a plaster moulding under the ceiling, grey carpet, the tall white casement window with the radiator cover under it, the dark wardrobe in the corner and six white desks. It was modelled from two photos. Nobody measured it, so every size is an estimate (the room is about 6.4 m by 8 m and 4 m high; the window, the desks and the wardrobe are guesses from the photos). The address point of No. 48 (48.1488592, 11.5964165), the way the window faces (bearing 314, toward the Eisbach) and what stands outside the window (the buildings, trees and water around it) come from OpenStreetMap. The floor is 4.5 m above the ground outside, because it is the first floor of an old building (also an estimate).
+
+OpenStreetMap does not tie No. 48 to a building footprint. It has the address point only. So no neighbouring building on this map is claimed to be No. 48 or to be anyone's office, and the buildings outside are only the surroundings.
+
+**What is made up.** Everything else: the second desk room, the corridor, the meeting room and the board room. The app needs 32 seats, the three board agents with their lecterns, the four boards and a meeting table, and the photos show six desks in one room. The second desk room has two long rows of desks for the other seats. The corridor runs across the whole width with the merge gong and the coffee machine and the way out at its east end. The meeting table is in the meeting room, and the issues and pull request boards, with their board agents, are in the board room. None of this is a record of the real office. The one exception inside the real room is the whiteboard on its east wall, which is the queue board.
+
+The six real desks, and two made-up ones in the board room, are for the people of the team, not for workers (see [The team](team.md)). All 32 worker seats are in the two long rows in the room next door, which is the agents' room.
+
+Surroundings: map data © OpenStreetMap contributors, available under the Open Database Licence. See <https://www.openstreetmap.org/copyright>.
+
+### agentix props
+
+The props an `agentix` map can use, in `props` (see [Props](#props) for the castle's and the station's). The list is in [`src/shared/maps/agentix-props.ts`](../src/shared/maps/agentix-props.ts).
+
+| `kind` | What it is |
+| --- | --- |
+| `wall` | An inside wall, floor to ceiling, `length` long along `rotY` (`0` runs along z, `π/2` along x). |
+| `doorway` | The frame of a way through an inside wall, and the wall over it, `width` across, along `rotY`. |
+| `window` | A tall casement window cut through the outside wall at `z`, its sill at `y`, `width` by `height`. |
+| `radiator` | A radiator behind a lattice cover, under a window, `width` wide. |
+| `plant` | A potted plant, on the floor or on a sill at `y`. |
+| `armoire` | The dark carved wardrobe, `width` by `length`, `height` high. |
+| `monitor` | A monitor on a desk at `y`, facing `rotY`, `width` across. A `height` under 0.4 makes it the curved wide one. |
+| `basket` | A wire waste basket. |
+| `lamp` | A ceiling lamp, hanging down to `y`. |
+| `gong` | The merge gong (one at most). |
+| `coffee` | A coffee machine on a counter: **E** for a cup that perks you up, like the office's coffee. |
+| `persondesk` | A desk for a person of the team, `id` as in `PEOPLE_DESKS`, `rotY` the way from the desk to the person sitting at it, `width` the desk's length (1.8) and `length` its depth (0.8). |
+
+Walls, the radiator, the wardrobe, floor plants, the basket, the gong, the coffee machine and the people's desks are walked round; the rest hangs or stands on something and is not in the way.
 
 ## The castle
 
@@ -119,7 +154,7 @@ A map that won't load (bad JSON, something outside the hall, too few seats, a pr
 | `id` | Lowercase letters, digits and dashes, up to 40. The building's pick is saved by it. **Required.** |
 | `name`, `icon`, `description` | What Settings shows. `name` is **required**. |
 | `extends` | Another map's `id` to start from. |
-| `style` | Which builder puts it up: `"castle"` (a stone hall) or `"station"` (a space station). Each has props of its own (see [Props](#props)); a castle can have a dungeon, a station an airlock. **Required.** |
+| `style` | Which builder puts it up: `"castle"` (a stone hall), `"station"` (a space station) or `"agentix"` (rooms with inside walls). Each has props of its own (see [Props](#props)); a castle can have a dungeon, a station an airlock. **Required.** |
 | `hall` | `{ width, length, height }`: the room (8 to 110 m either way), and how high its walls are (4 to 40 m). **Required.** |
 | `spawn` | `{ x, z, rotY }`: where you stand when you arrive and the throne's taken. Without it, at the door, facing the middle. |
 | `door` | `{ x, z }`: just inside the way in and out. The doorway goes in the nearest wall; workers come in and go home through it. **Required.** |

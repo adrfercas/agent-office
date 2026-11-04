@@ -1,9 +1,10 @@
 import * as THREE from 'three';
-import type { ViewMode } from '../state';
+import type { MouseMode, ViewMode } from '../state';
 
-// Your hands on the controls: the keys you hold, and the mouse, which looks around. In first person a
-// click on the scene captures the mouse (pointer lock); where it won't lock, or in third person, you
-// drag to look. Giving the mouse up for a window and taking it straight back when the window closes
+// Your hands on the controls: the keys you hold, and the mouse, which looks around. By default the
+// cursor stays free: a click picks what it is on and a left-drag looks around. With the mouse set to
+// captured, a click on the scene in first person captures it (pointer lock) and moving it looks
+// around; where that won't lock, or in third person, you drag to look. Giving the mouse up for a window and taking it straight back when the window closes
 // (by its ✕ or Esc) is fragile: see lock, yieldMouse and the Esc listeners.
 
 const LOOK_SPEED = 0.0022; // radians per pixel of mouse movement while the pointer is locked
@@ -27,8 +28,13 @@ export abstract class PlayerInput {
   lookPitch = -0.08;
   view: ViewMode = 'first';
   /**
+   * How the mouse works in first person: 'free' leaves the cursor alone (a click picks what it is on, a
+   * left-drag looks around), 'captured' is the game way (a click grabs the mouse, which then looks around).
+   */
+  mouse: MouseMode = 'free';
+  /**
    * A click (not a drag) on the scene, in normalized device coordinates.
-   * In first person it is always the crosshair, (0, 0).
+   * With the mouse captured in first person it is always the crosshair, (0, 0).
    */
   onClick: ((ndc: THREE.Vector2) => void) | null = null;
   protected keys = new Set<string>();
@@ -60,6 +66,8 @@ export abstract class PlayerInput {
   enabled = true;
   /** False while the mouse picks something else (an emote on the wheel), so it doesn't turn the camera. */
   mouseLook = true;
+  /** How fast the view turns against the usual speed: the look speed setting, and slower zoomed in (see features/navigation). */
+  lookScale = 1;
 
   constructor(private dom: HTMLElement) {
     window.addEventListener('keydown', (e) => {
@@ -93,14 +101,16 @@ export abstract class PlayerInput {
 
     dom.addEventListener('pointerdown', (e) => {
       if (!this.enabled) return;
-      if (this.view === 'first' && e.pointerType === 'mouse' && !this.lockFailed) {
+      if (this.crosshair && e.pointerType === 'mouse' && !this.lockFailed) {
         if (this.locked) {
           if (e.button === 0) this.onClick?.(CENTER);
           return;
         }
         this.lock();
       }
-      // Drag to orbit (third person) or to look around (first person without pointer lock).
+      // Drag to orbit (third person) or to look around (first person without pointer lock). Only with
+      // the left button: browsers like Vivaldi use a right-drag for their mouse gestures.
+      if (e.button !== 0) return;
       this.drag = { x: e.clientX, y: e.clientY, moved: 0 };
     });
     window.addEventListener('pointerup', (e) => {
@@ -108,7 +118,7 @@ export abstract class PlayerInput {
       this.drag = null;
       // A click that captured the mouse is not also a click on the world.
       if (!d || d.moved > 5 || !this.enabled || this.locked || this.lockPending || e.target !== dom) return;
-      if (this.view === 'first') this.onClick?.(CENTER);
+      if (this.crosshair) this.onClick?.(CENTER);
       else {
         const r = dom.getBoundingClientRect();
         this.onClick?.(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1));
@@ -138,11 +148,7 @@ export abstract class PlayerInput {
       this.drag.x = e.clientX;
       this.drag.y = e.clientY;
       this.drag.moved += Math.abs(dx) + Math.abs(dy);
-      if (this.view === 'first') this.look(dx * DRAG_LOOK_SPEED, dy * DRAG_LOOK_SPEED);
-      else {
-        this.camYaw -= dx * 0.006;
-        this.camPitch = THREE.MathUtils.clamp(this.camPitch + dy * 0.004, 0.05, 1.3);
-      }
+      this.lookBy(dx, dy);
     });
     document.addEventListener('pointerlockchange', () => {
       this.lockPending = false;
@@ -164,14 +170,15 @@ export abstract class PlayerInput {
       if (!this.enabled) this.unlock();
     });
     document.addEventListener('pointerlockerror', () => this.refused());
-    dom.addEventListener(
-      'wheel',
-      (e) => {
-        if (this.view === 'third') this.camDist = THREE.MathUtils.clamp(this.camDist + e.deltaY * 0.01, 2.5, 16);
-        e.preventDefault();
-      },
-      { passive: false },
-    );
+  }
+
+  /** Turns the view as dragging this many pixels would: your head in first person, the camera's orbit in third. */
+  lookBy(dx: number, dy: number) {
+    if (this.view === 'first') this.look(dx * DRAG_LOOK_SPEED, dy * DRAG_LOOK_SPEED);
+    else {
+      this.camYaw -= dx * 0.006 * this.lookScale;
+      this.camPitch = THREE.MathUtils.clamp(this.camPitch + dy * 0.004 * this.lookScale, 0.05, 1.3);
+    }
   }
 
   get locked(): boolean {
@@ -183,9 +190,22 @@ export abstract class PlayerInput {
     return this.locked && !this.letting;
   }
 
+  /** Whether you aim with the middle of the screen (first person, mouse captured) rather than with the cursor. */
+  get crosshair(): boolean {
+    return this.view === 'first' && this.mouse === 'captured';
+  }
+
   /** Whether clicking the scene will capture the mouse for looking around. */
   get canLock(): boolean {
-    return this.view === 'first' && !this.lockFailed && typeof this.dom.requestPointerLock === 'function';
+    return this.crosshair && !this.lockFailed && typeof this.dom.requestPointerLock === 'function';
+  }
+
+  /** Switches between the free cursor and the captured mouse; a captured mouse is let go of. */
+  setMouse(mouse: MouseMode) {
+    if (mouse === this.mouse) return;
+    this.mouse = mouse;
+    this.drag = null;
+    if (mouse === 'free') this.unlock();
   }
 
   unlock() {
@@ -262,8 +282,8 @@ export abstract class PlayerInput {
   }
 
   private look(dx: number, dy: number) {
-    this.camYaw -= dx;
-    this.lookPitch = THREE.MathUtils.clamp(this.lookPitch - dy, -1.45, 1.45);
+    this.camYaw -= dx * this.lookScale;
+    this.lookPitch = THREE.MathUtils.clamp(this.lookPitch - dy * this.lookScale, -1.45, 1.45);
   }
 }
 

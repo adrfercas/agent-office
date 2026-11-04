@@ -211,21 +211,34 @@ test('what the browser remembers keeps its keys and shapes', () => {
   assert.deepEqual(state.lastSpot(), { floor: 'f1', name: 'F', x: 1, y: 2, z: 3, facing: 4 });
   assert.ok(storage.has('agent-office.spot'));
   const settings = state.loadSettings();
-  assert.deepEqual(settings, { view: 'first', volume: 0.7, muted: false, music: 0.5, musicMuted: false, pageTurns: true, pushToTalk: false, notify: true, needsYouSound: 'once', hud: state.HUD_DEFAULTS, pins: [] });
+  assert.deepEqual(settings, { view: 'first', mouse: 'free', graphics: 'light', lookSpeed: 1, volume: 0.7, muted: false, music: 0.5, musicMuted: false, pageTurns: true, pushToTalk: false, notify: true, needsYouSound: 'once', hud: state.HUD_DEFAULTS, pins: [] });
   state.saveSettings({ ...settings, volume: 2, view: 'third', needsYouSound: 'remind' });
   assert.equal(state.loadSettings().volume, 1);
   assert.equal(state.loadSettings().view, 'third');
   assert.equal(state.loadSettings().needsYouSound, 'remind');
+  // Light unless Full was picked; nothing saved (or something unknown) is Light.
+  state.saveSettings({ ...settings, graphics: 'full' });
+  assert.equal(state.loadSettings().graphics, 'full');
+  state.saveSettings({ ...settings, graphics: 'ultra' as never });
+  assert.equal(state.loadSettings().graphics, 'light');
+  storage.set('agent-office.settings', JSON.stringify({ view: 'third' }));
+  assert.equal(state.loadSettings().graphics, 'light');
   // A setting saved as something the office doesn't know goes back to how it starts.
   state.saveSettings({ ...settings, needsYouSound: 'loud' as never });
   assert.equal(state.loadSettings().needsYouSound, 'once');
+  // Settings saved before there was a mouse mode get the free cursor; a chosen captured mouse is kept.
+  const { mouse: _mouse, ...old } = settings;
+  storage.set('agent-office.settings', JSON.stringify(old));
+  assert.equal(state.loadSettings().mouse, 'free');
+  state.saveSettings({ ...settings, mouse: 'captured' });
+  assert.equal(state.loadSettings().mouse, 'captured');
   store.apply(welcome());
   assert.equal(state.lastFloor(), 'f1');
 });
 
 test("the store's keys are its state, as window.__office shows them", () => {
   // As the office had them before its store was split into slices: methods and the slices aren't among them.
-  assert.deepEqual(Object.keys(store).sort(), ['accounts', 'ball', 'cabinet', 'cabinetFrame', 'cars', 'carsAt', 'chat', 'clock', 'decor', 'dog', 'dogStart', 'drawing', 'floor', 'floorPlan', 'floors', 'ice', 'invites', 'issues', 'jail', 'jukebox', 'leaveOnMerge', 'limits', 'machine', 'map', 'me', 'meeting', 'notify', 'peers', 'profile', 'project', 'projectsDir', 'prompts', 'pulls', 'queue', 'repos', 'screens', 'services', 'signins', 'sky', 'subs', 'team', 'theme', 'upgrade', 'usage', 'whiteboard', 'workers', 'you']);
+  assert.deepEqual(Object.keys(store).sort(), ['accounts', 'ball', 'cabinet', 'cabinetFrame', 'cars', 'carsAt', 'chat', 'clock', 'decor', 'dog', 'dogStart', 'drawing', 'floor', 'floorPlan', 'floors', 'ice', 'invites', 'issues', 'jail', 'jukebox', 'leaveOnMerge', 'limits', 'machine', 'map', 'me', 'meeting', 'notify', 'peers', 'people', 'profile', 'project', 'projectsDir', 'prompts', 'pulls', 'queue', 'repos', 'screens', 'services', 'signins', 'sky', 'subs', 'team', 'theme', 'upgrade', 'usage', 'whiteboard', 'workers', 'you']);
 });
 
 test('a new store starts every field where it always has', async () => {
@@ -249,7 +262,7 @@ test('a new store starts every field where it always has', async () => {
       dog: null, dogStart: 0, jukebox: { on: false, track: JUKEBOX_TUNES[0].id, startedAt: 0, elapsed: 0, since: 0 }, clock: '<undefined>',
       whiteboard: [], drawing: [], cabinet: { player: null, scores: [] }, cabinetFrame: null, ball: {},
       cars: parked(), carsAt: [], jail: { prisoners: [], bones: 0 },
-      team: null, accounts: null, signins: null,
+      team: null, people: { members: [] }, accounts: null, signins: null,
     },
   );
 });

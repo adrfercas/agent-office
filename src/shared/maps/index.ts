@@ -1,5 +1,7 @@
 import { BEANBAGS, BOARDS, DESKS, ELEVATOR, ELEVATOR_CAR, EXIT_DOOR, FLOOR, MEETING_SEATS, SEATING, STATIONS, STATION_AGENT, WALL_HEIGHT, WING_DESKS, seatHere, seatPlace, type DeskDef, type SeatDef, type SeatPlace, type StationKind } from '../layout.js';
 import type { Circle, Rect } from '../nav.js';
+import { AGENTIX } from './agentix.js';
+import { AGENTIX_PROP_KINDS, agentixFootprint, agentixTop } from './agentix-props.js';
 import { planAirlock, wallOpenings } from './airlock.js';
 import { CASTLE } from './castle.js';
 import { MapError, isObj, num, str } from './check.js';
@@ -13,15 +15,18 @@ export * from './types.js';
 export { ADRIFT, AIRLOCK, HATCH, HULL, VIEWPORT, adrift, adriftFrom, wallOut, wallPoint, type Drift } from './airlock.js';
 export { DUNGEON_SLAB, SEND_HOME_STEPS, dungeonClear, levelRoute, prisonSeat, wasting } from './dungeon.js';
 
-/** The office: built in code (world/office/), and what the building is until someone picks another map. */
+/** The office: built in code (world/office/). It can be picked, but it's no longer what the building is until someone picks another map (see DEFAULT_MAP). */
 export const OFFICE_MAP = 'office';
 /** The maps that come with the office, besides the office itself. */
-export const BUILTIN_MAPS: readonly MapConfig[] = [CASTLE, STATION];
+export const BUILTIN_MAPS: readonly MapConfig[] = [AGENTIX, CASTLE, STATION];
+/** The map the building is on until someone picks another, and when the pick won't load: the agentix office. The office stays one to pick. */
+export const DEFAULT_MAP = 'agentix';
 
 /** The props each style of map can put up (see ./props.ts and ./station-props.ts): their kinds, the floor each takes and how high it reaches. */
 const STYLE_PROPS: Record<MapStyle, { kinds: Readonly<Record<string, string>>; footprint: typeof propFootprint; top(p: PropConfig): number }> = {
   castle: { kinds: PROP_KINDS, footprint: propFootprint, top: propTop },
   station: { kinds: STATION_PROP_KINDS, footprint: stationFootprint, top: stationTop },
+  agentix: { kinds: AGENTIX_PROP_KINDS, footprint: agentixFootprint, top: agentixTop },
 };
 
 const STATION_KINDS: readonly StationKind[] = ['issues', 'pulls', 'queue'];
@@ -322,6 +327,7 @@ export function planMap(input: unknown): MapPlan {
     // Everything the builder reads, in sizes it can build.
     opt(p.y, `${what}.y`, 0, 100);
     opt(p.rotY, `${what}.rotY`, -1e4, 1e4);
+    if (p.id !== undefined && (typeof p.id !== 'string' || p.id.length > 40)) throw new MapError(`${what}.id should be text, up to 40 characters`);
     opt(p.scale, `${what}.scale`, 0.2, 5);
     opt(p.width, `${what}.width`, 0.3, 20);
     opt(p.height, `${what}.height`, 0.3, 20);

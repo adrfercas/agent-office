@@ -3,7 +3,7 @@
 import path from 'node:path';
 import { OPEN_CODE_MODEL_MAX } from '../../../shared/providers.js';
 import { MAX_WORKER_LIMIT, parseWorkerLimit } from '../../machine.js';
-import { OFFICE_MAP } from '../../../shared/maps/index.js';
+import { DEFAULT_MAP } from '../../../shared/maps/index.js';
 import { isThemePick } from '../../../shared/theme.js';
 import { PROMPTS, PROMPT_MAX, isPromptId } from '../../../shared/prompts.js';
 import type { SettingsClientMsg } from '../../../shared/protocol.js';
@@ -26,8 +26,8 @@ export const mapNews = (ctx: Ctx, was: string, who?: string) => {
   ctx.broadcast({ t: 'map', state: maps.state() });
   if (now === was) return;
   const plan = maps.plan();
-  // Without a pick, a map of your own broke (back to the office) or was fixed (back to it).
-  const why = now === OFFICE_MAP ? `: the map "${was}" won't load (see ⚙️ Settings)` : ': it loads again';
+  // Without a pick, a map of your own broke (back to agentix) or was fixed (back to it).
+  const why = now === DEFAULT_MAP ? `: the map "${was}" won't load (see ⚙️ Settings)` : ': it loads again';
   ctx.toastAll(who ? `${who} changed the building's map to ${plan.icon} ${plan.name}` : `The building's map is ${plan.icon} ${plan.name} now${why}`);
 };
 

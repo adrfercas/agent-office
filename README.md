@@ -41,7 +41,8 @@ curl -fsSL https://raw.githubusercontent.com/AgentSystemLabs/agent-office/main/i
 - **Agents that manage agents.** Every worker can list, hire, message and send home the others, through an `agent-office` MCP server (Claude Code, Codex, OpenCode) or the `office-workers` command. Ask one to "send everyone whose PR merged home" and it does, deleting their worktrees and branches unless they hold unpushed work. A worker that opens its pull request itself (`gh pr create`) shows it at its desk, and one the office missed can be told which is its own (`office-workers pr`).
 - **Together.** Voice, chat, screen sharing on the lounge TV and a shared whiteboard.
 
-- **Other maps.** Turn the whole building into a castle: sit on a throne of iron blades while your workers line up before you when they're done, send new ones off through the Hand of the King, and watch their beards grow long and grey as they toil. Send one home and the Kingsguard runs up from the dungeon, marches it down the stairs and throws it in a cell, where it starves, dies and rots down to a skeleton. Or into a space station in orbit, the Earth turning outside its windows: you run it from the captain's chair on the bridge, and a worker sent home is marched to the airlock and blown out into space, to drift off past the observation windows with everyone who went before it. Or make a map of your own, with its own way of seeing workers off in JSON ([docs/maps.md](docs/maps.md)).
+- **Other maps.** This fork's default map is **agentix**: the agentix office at Widenmayerstraße 48 in Munich, one room modelled from two photos and the rest made up (see [docs/maps.md](docs/maps.md) for which is which). The original office is still there under ⚙️ Settings → 🏢 Building → Map. You can also turn the whole building into a castle: sit on a throne of iron blades while your workers line up before you when they're done, send new ones off through the Hand of the King, and watch their beards grow long and grey as they toil. Send one home and the Kingsguard runs up from the dungeon, marches it down the stairs and throws it in a cell, where it starves, dies and rots down to a skeleton. Or into a space station in orbit, the Earth turning outside its windows: you run it from the captain's chair on the bridge, and a worker sent home is marched to the airlock and blown out into space, to drift off past the observation windows with everyone who went before it. Or make a map of your own, with its own way of seeing workers off in JSON ([docs/maps.md](docs/maps.md)).
+- **Easy on the computer.** Made to be left open all day: ⚙️ Settings → 🧍 You → Graphics is **Light** unless you pick **Full**, and the office draws less while nobody touches it and not at all while its tab is hidden (see [docs/features.md](docs/features.md)).
 
 There's a lot more (a rooftop bar, an office dog, an arcade, supercars in the garage to drive round a scenic loop past a farm, pines, mountains and a beach): see [docs/features.md](docs/features.md).
 
@@ -54,6 +55,16 @@ On the machine that runs the office:
 - **git**, and the **GitHub CLI** (`gh auth login`) for cloning repos and the issue and PR boards
 
 ## Run locally
+
+**This fork on Windows (agentix), with Docker:** from the repo root in Git Bash, one command starts everything inside a container, so nothing is installed on the computer:
+
+```bash
+scripts/agentix-office.sh start    # then open http://localhost:5173, password: dev
+scripts/agentix-office.sh status   # what runs, and the address
+scripts/agentix-office.sh stop     # stops the servers; the container and its data stay
+```
+
+If the container is gone it is made again (from the image `agent-office-dev`, built from `.devcontainer/` if that is missing), and `npm ci` runs if `node_modules` is empty. The Claude Code login inside the container lives in its own volume, so it survives that; if it is missing, `start` prints the one command to sign in. The script never deletes a container, a volume or an image. Details and settings are at the top of [`scripts/agentix-office.sh`](scripts/agentix-office.sh) and in [docs/team.md](docs/team.md#starting-the-office).
 
 Install the latest release and start the office:
 
@@ -100,6 +111,8 @@ npm install          # also builds the client and server
 npm install -g .     # puts `agent-office` on your PATH
 agent-office
 ```
+
+To work on the office without installing anything on your computer, open the clone in its dev container (`.devcontainer/`, with Docker and VS Code's Dev Containers extension: **Reopen in Container**). It installs the dependencies and a headless browser inside the container. Then run `npm run dev` there and open http://localhost:5173 (the password is `dev`). Run `gh auth login` in the container before anything that needs GitHub.
 
 > Only your computer can reach the office: it listens on `127.0.0.1`. `--host 0.0.0.0` lets your network in, but over plain http, where voice and screen sharing don't work. To share the office with a team, put it on a server: [AWS](#deploy-to-aws-ec2), [Azure](#deploy-to-azure), [Railway](#deploy-to-railway), [Fly.io](#deploy-to-flyio), [Dokploy](#deploy-to-dokploy), [Coolify](#deploy-to-coolify) or [any Ubuntu or Debian machine](#deploy-to-any-ubuntu-or-debian-server).
 
@@ -366,7 +379,8 @@ deploy/coolify.sh ssh 'node /opt/agent-office/bin/agent-office.js accounts invit
 | --- | --- |
 | W A S D | Walk (hold Shift to run) |
 | Space | Jump |
-| Mouse drag / wheel | Orbit / zoom the camera |
+| Mouse (left button) | The cursor stays free: click a person or thing to use it, drag to look around (first person) or orbit the camera (third person), wheel to zoom (in first person it narrows the view, in third it moves the camera). The right button is left alone for your browser's mouse gestures. ⚙️ Settings → **Mouse in first person** can capture the mouse for looking around instead (a click grabs it, Esc gives it back) |
+| Touchpad | Swipe with two fingers to look around (first person) or orbit the camera (third person), pinch to zoom. ⚙️ Settings → **Look speed** sets how fast dragging, swiping and a captured mouse turn the view |
 | E | Interact: hire a worker, open its terminal, read a board, sit down, ride the elevator |
 | P | Give a task to a new worker, or to the one at this desk |
 | C | See a worker's changes: diff, commit, open a PR |
@@ -405,7 +419,8 @@ Every change to the app that lands on `main` is published as a GitHub release by
 - [Features](docs/features.md): everything in the office, room by room
 - [Agents](docs/agents.md): Claude Code, Codex and OpenCode, models and effort, and the office's prompts
 - [Configuration](docs/configuration.md): every command-line option, and where the office keeps its data
-- [Maps](docs/maps.md): the castle, the space station, and making a map of your own
+- [Maps](docs/maps.md): agentix, the castle, the space station, and making a map of your own
+- [The team](docs/team.md): your colleagues on the agentix map, kept in a file git ignores
 - [Workers' servers on your own computer](docs/tunnel.md): `agent-office tunnel`, which opens every worker's web server on your computer by itself
 - [AWS reference](docs/aws.md): Tailscale, service tunnels, upgrades, and everything `deploy/aws.sh` does
 - [Railway reference](docs/railway.md): what `deploy/railway.sh` sets up, and what the volume keeps

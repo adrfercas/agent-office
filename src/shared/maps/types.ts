@@ -13,7 +13,7 @@ import type { Bounds, Obstacles, Pt, Rect } from '../nav.js';
  */
 
 /** The styles there's a builder for (the client's world/styles.ts): a map's `style` is one of them. */
-export const MAP_STYLES = ['castle', 'station'] as const;
+export const MAP_STYLES = ['castle', 'station', 'agentix'] as const;
 export type MapStyle = (typeof MAP_STYLES)[number];
 
 /** The boards on the walls. */
@@ -62,6 +62,8 @@ export interface TableConfig {
  */
 export interface PropConfig {
   kind: string;
+  /** Which one it is, for a prop something else refers to (an agentix person's desk: its id in PEOPLE_DESKS). */
+  id?: string;
   x: number;
   z: number;
   /** Up off the floor (a banner, a window, a chandelier). */
@@ -162,8 +164,8 @@ export interface SendHomeConfig {
   rotHours?: number;
 }
 
-/** The colors a map's `palette` can give: a castle's, then a station's. */
-export type PaletteKey = 'stone' | 'floor' | 'carpet' | 'wood' | 'trim' | 'hull' | 'deck' | 'panel' | 'metal' | 'glow';
+/** The colors a map's `palette` can give: a castle's, then a station's, then agentix's. */
+export type PaletteKey = 'stone' | 'floor' | 'carpet' | 'wood' | 'trim' | 'hull' | 'deck' | 'panel' | 'metal' | 'glow' | 'wall' | 'desk' | 'frame' | 'mesh';
 
 /** What a map is made of: see docs/maps.md for what each part does and how to write one. */
 export interface MapConfig {
@@ -175,7 +177,7 @@ export interface MapConfig {
   description?: string;
   /** Another map's id to start from: everything given here replaces its part (objects are merged, lists replaced). */
   extends?: string;
-  /** Which builder puts it up: 'castle' or 'station' (see MAP_STYLES). */
+  /** Which builder puts it up: 'castle', 'station' or 'agentix' (see MAP_STYLES). */
   style: string;
   /** The room: x from -width/2 to width/2, z from -length/2 to length/2, walls `height` high. */
   hall: { width: number; length: number; height: number };
@@ -201,7 +203,7 @@ export interface MapConfig {
   agents?: { outfit?: 'peasant' | 'none'; ageMinutes?: number };
   /**
    * Colors, as CSS colors: a castle's stone, floor, carpet, wood and trim; a station's hull, deck,
-   * panel, metal and glow.
+   * panel, metal and glow; agentix's wall, trim, floor, wood, desk, frame and mesh.
    */
   palette?: Partial<Record<PaletteKey, string>>;
   /** A dungeon under the hall, with cells to lock workers up in (a castle's). */
