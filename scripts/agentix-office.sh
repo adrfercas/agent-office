@@ -4,10 +4,17 @@
 #   scripts/agentix-office.sh start    # make sure the container, its dependencies and both servers are up
 #   scripts/agentix-office.sh status   # what is running, and the address
 #   scripts/agentix-office.sh stop     # stop the two servers; the container and all data stay
+#   scripts/agentix-office.sh add-repo 'C:\path\to\repo'   # let the office use a repo you already have
 #
 # Everything runs inside the container, so nothing gets installed on the computer. It never deletes a
 # container, a volume or an image, and running `start` twice does no harm. If the container is gone it
 # is made again from the image `agent-office-dev` (built from .devcontainer/ if that is missing).
+#
+# Repos you already have on this computer are listed in .agent-office/local-repos.txt (git-ignored, one
+# Windows path a line). Each is mounted where the office would clone it, /workspaces/repos/<owner>/<repo>,
+# so adding it in the elevator uses your folder and clones nothing. Only those folders are shared with the
+# container, never your whole user folder. Docker can only mount a folder when a container is made, so
+# add-repo makes a new one: the old one is stopped and renamed, not deleted, and the logins move across.
 #
 # Settings, for a second office next to the real one (a test, say):
 #   AGENTIX_CONTAINER     container name                       (agentix-office)
@@ -15,6 +22,8 @@
 #   AGENTIX_IMAGE         image                                (agent-office-dev)
 #   AGENTIX_NODE_VOLUME   volume with node_modules             (agent-office-node-modules)
 #   AGENTIX_CLAUDE_VOLUME volume with the Claude Code login    (agentix-office-claude)
+#   AGENTIX_GH_VOLUME     volume with the GitHub login         (agentix-office-gh)
+#   AGENTIX_ROOT          the repo to mount, as a Windows path (the checkout this script is in)
 #   AGENTIX_PASSWORD      the office password                  (dev)
 #   AGENTIX_CPUS          CPUs the container may use           (4)
 #   AGENTIX_WATCH         1: restart the server when a file changes (0, see below)
@@ -27,6 +36,7 @@ PORT="${AGENTIX_PORT:-5173}"
 IMAGE="${AGENTIX_IMAGE:-agent-office-dev}"
 NODE_VOLUME="${AGENTIX_NODE_VOLUME:-agent-office-node-modules}"
 CLAUDE_VOLUME="${AGENTIX_CLAUDE_VOLUME:-agentix-office-claude}"
+GH_VOLUME="${AGENTIX_GH_VOLUME:-agentix-office-gh}"
 PASSWORD="${AGENTIX_PASSWORD:-dev}"
 CPUS="${AGENTIX_CPUS:-4}"
 # The Windows folder mount passes no file-change events into the container (checked: a watcher saw
@@ -41,6 +51,8 @@ WORK=/workspaces/agent-office
 VITE_PORT=5173
 SERVER_PORT=4600
 CLAUDE_HOME=/home/node/.claude
+GH_HOME=/home/node/.config/gh
+REPOS=/workspaces/repos
 
 # Git Bash turns /paths into C:\paths on their way to docker.exe, which breaks every container path.
 export MSYS_NO_PATHCONV=1
@@ -51,6 +63,7 @@ die() { printf 'agentix-office: %s\n' "$*" >&2; exit 1; }
 
 # The repo root, as the Windows path Docker wants for the bind mount.
 root() {
+  if [ -n "${AGENTIX_ROOT:-}" ]; then printf '%s' "$AGENTIX_ROOT"; return; fi
   local here
   here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && (pwd -W 2>/dev/null || pwd))"
   printf '%s' "$here"
@@ -69,6 +82,35 @@ need_docker() {
 
 container_state() { docker inspect -f '{{.State.Status}}' "$NAME" 2>/dev/null || true; }
 
+repos_file() { printf '%s/.agent-office/local-repos.txt' "$(root)"; }
+
+# owner/repo of a checkout on this computer, from its origin. Reads the checkout's config; no network.
+github_name_of() {
+  local url
+  url="$(git -C "$1" config --get remote.origin.url 2>/dev/null || true)"
+  url="${url%.git}"
+  case "$url" in
+    https://github.com/*) printf '%s' "${url#https://github.com/}" ;;
+    git@github.com:*) printf '%s' "${url#git@github.com:}" ;;
+    ssh://git@github.com/*) printf '%s' "${url#ssh://git@github.com/}" ;;
+  esac
+}
+
+# Prints "<windows path>|<place in the container>" for each repo in the list.
+local_repos() {
+  local file line name
+  file="$(repos_file)"
+  [ -f "$file" ] || return 0
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
+    [ -n "$line" ] || continue
+    line="${line//\\//}"
+    name="$(github_name_of "$line")"
+    if [ -z "$name" ]; then say "Skipping $line: it is not a checkout with a GitHub origin." >&2; continue; fi
+    printf '%s|%s/%s\n' "$line" "$REPOS" "$name"
+  done <"$file"
+}
+
 ensure_image() {
   if docker image inspect "$IMAGE" >/dev/null 2>&1; then return; fi
   say "Image $IMAGE is missing: building it from .devcontainer/ (a few minutes, needs the internet)."
@@ -81,6 +123,10 @@ ensure_container() {
     "")
       ensure_image
       say "Container $NAME is missing: creating it."
+      local mounts=() line
+      while IFS= read -r line; do
+        [ -n "$line" ] && mounts+=(-v "${line%%|*}:${line##*|}")
+      done < <(local_repos)
       docker run -d --name "$NAME" \
         --user node -w "$WORK" \
         --cpus "$CPUS" --restart unless-stopped \
@@ -90,6 +136,8 @@ ensure_container() {
         -v "$(root):$WORK" \
         -v "$NODE_VOLUME:$WORK/node_modules" \
         -v "$CLAUDE_VOLUME:$CLAUDE_HOME" \
+        -v "$GH_VOLUME:$GH_HOME" \
+        "${mounts[@]}" \
         -p "127.0.0.1:$PORT:$VITE_PORT" \
         "$IMAGE" sleep infinity >/dev/null
       ;;
@@ -105,6 +153,90 @@ ensure_container() {
   fi
   # The tests run git in the repo, and git distrusts a folder that another user's mount owns.
   docker exec -w / "$NAME" sh -c "git config --global --get-all safe.directory | grep -qx '$WORK' || git config --global --add safe.directory '$WORK'" || true
+  ensure_local_repos
+  ensure_github
+}
+
+# A Windows checkout has CRLF line endings that Git for Windows hides. Linux git would call those files
+# modified, so inside the mounted repos (and only there) it converts them the same way.
+ensure_local_repos() {
+  docker exec -u root "$NAME" sh -c "mkdir -p '$REPOS' && chown node:node '$REPOS' && for d in '$REPOS'/*; do [ -d \"\$d\" ] && chown node:node \"\$d\"; done; true"
+  docker exec -w / "$NAME" sh -c "
+    git config --file \"\$HOME/.gitconfig-local-repos\" core.autocrlf true
+    git config --global 'includeIf.gitdir:$REPOS/.path' \"\$HOME/.gitconfig-local-repos\"
+    git config --global --get-all safe.directory | grep -qxF '*' || git config --global --add safe.directory '*'
+  "
+  # New floors look in this folder first: a repo that's mounted here is used as it is.
+  docker exec -w "$WORK" "$NAME" sh -c "[ -s .agent-office/projects-folder.json ] && grep -q dir .agent-office/projects-folder.json || printf '{\"dir\":\"$REPOS\",\"by\":\"agentix-office.sh\",\"at\":%s000}' \"\$(date +%s)\" > .agent-office/projects-folder.json"
+}
+
+# Over https with the gh login: the image has no ssh, so git can't use a git@ address in here.
+ensure_github() {
+  docker exec -w / "$NAME" sh -c "gh auth status >/dev/null 2>&1 && gh config set git_protocol https && gh config set -h github.com git_protocol https && gh auth setup-git" || true
+}
+
+# Copies a login from the container before this one, as a stream, so it never lands on this computer's disk.
+carry_over() {
+  local from="$1" path="$2" into="$3"
+  docker exec "$NAME" true
+  docker cp "$from:$path" - 2>/dev/null | docker cp - "$NAME:$into" 2>/dev/null || return 1
+}
+
+# Makes a new container, so it can have the folders the list says now. The old one is kept, stopped.
+remake_container() {
+  local old="" now
+  if [ -n "$(container_state)" ]; then
+    now="$(date +%Y%m%d-%H%M%S)"
+    old="$NAME-before-$now"
+    say "Stopping $NAME and keeping it as $old."
+    docker stop "$NAME" >/dev/null
+    docker rename "$NAME" "$old"
+  fi
+  ensure_container
+  [ -n "$old" ] || return 0
+  # A container made before the login volumes kept its logins inside itself.
+  if ! claude_login_present && docker cp "$old:$CLAUDE_HOME/.credentials.json" - >/dev/null 2>&1; then
+    carry_over "$old" "$CLAUDE_HOME" /home/node/ && carry_over "$old" /home/node/.claude.json "$CLAUDE_HOME/" || true
+    asroot chown -R node:node "$CLAUDE_HOME"
+  fi
+  if ! docker exec -w / "$NAME" gh auth status >/dev/null 2>&1 && docker cp "$old:$GH_HOME/hosts.yml" - >/dev/null 2>&1; then
+    carry_over "$old" "$GH_HOME" /home/node/.config/ || true
+    asroot chown -R node:node "$GH_HOME"
+  fi
+  ensure_github
+  say "The old container is still there, stopped. Once all is well you can remove it with: docker rm $old"
+}
+
+add_repo() {
+  local path="${1:-}" file name
+  [ -n "$path" ] || die "usage: scripts/agentix-office.sh add-repo 'C:\\path\\to\\repo'"
+  path="${path//\\//}"
+  need_docker
+  name="$(github_name_of "$path")"
+  [ -n "$name" ] || die "$path is not a checkout with a GitHub origin."
+  file="$(repos_file)"
+  if [ -f "$file" ] && grep -qxF "$path" "$file"; then
+    say "$path is on the list already."
+  else
+    printf '%s\n' "$path" >>"$file"
+    say "Added $path ($name)."
+  fi
+  remake_container
+  start
+  say ""
+  say "In the elevator, pick $name and press Add floor: it uses your folder and clones nothing."
+}
+
+# Repos on the list that this container was made without.
+warn_missing_repos() {
+  local line have
+  have="$(docker inspect -f '{{range .Mounts}}{{.Destination}} {{end}}' "$NAME")"
+  while IFS= read -r line; do
+    case " $have " in
+      *" ${line##*|} "*) ;;
+      *) say "Note: ${line%%|*} is on the list but this container doesn't have it. Run: scripts/agentix-office.sh add-repo '${line%%|*}'" ;;
+    esac
+  done < <(local_repos)
 }
 
 ensure_dependencies() {
@@ -168,6 +300,7 @@ start() {
   wait_for "Vite" "http://127.0.0.1:$VITE_PORT/" agentix-vite
 
   say ""
+  warn_missing_repos
   say "The office is up:  http://localhost:$PORT"
   say "Password:          $PASSWORD"
   if ! claude_login_present; then
@@ -225,5 +358,6 @@ case "${1:-}" in
   start) start ;;
   stop) stop ;;
   status) status ;;
-  *) say "usage: scripts/agentix-office.sh start | stop | status"; exit 2 ;;
+  add-repo) add_repo "${2:-}" ;;
+  *) say "usage: scripts/agentix-office.sh start | stop | status | add-repo <path>"; exit 2 ;;
 esac
